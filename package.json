@@ -1,0 +1,17 @@
+{
+    "name": "viesdoknuskaitymas",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "dependencies": {
+        "dotenv": "^17.2.2",
+        "express": "^5.1.0",
+        "pdfjs-dist": "^5.4.149"
+    },
+    "type": "module"
+}
