@@ -126,11 +126,15 @@ async function extractPdfContent(url) {
             emailsMap.set(email, emailSet);
         }
 
-        const overlapTolerance = 5;
-        const hasSloppyRedactions = await searchForSloppyRedactionsInPage(page, overlapTolerance, content.items, annots);
+        try {
+            const overlapTolerance = 5;
+            const hasSloppyRedactions = await searchForSloppyRedactionsInPage(page, overlapTolerance, content.items, annots);
 
-        if (hasSloppyRedactions) {
-            sloppyRedactionsInPages.add(i);
+            if (hasSloppyRedactions) {
+                sloppyRedactionsInPages.add(i);
+            }
+        } catch (e) {
+            console.error(e);
         }
     }
 
@@ -295,7 +299,7 @@ function cleanMetadata(obj) {
 async function searchForSloppyRedactionsInPage(pdfPage, tolerance, textContent, annotations) {
     const pageExtents = pdfPage.view;
 
-    textContent ??= await pdfPage.getTextContent();
+    textContent ??= (await pdfPage.getTextContent()).items;
 
     annotations ??= await pdfPage.getAnnotations();
 
@@ -318,7 +322,7 @@ async function searchForSloppyRedactionsInPage(pdfPage, tolerance, textContent, 
         return areas;
     }, []);
 
-    return textContent.items.some((item) => {
+    return textContent.some((item) => {
         const { str, width, height, transform } = item;
         if (!str?.trim()) {
             return false;
