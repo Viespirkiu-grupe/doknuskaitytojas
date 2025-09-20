@@ -35,8 +35,16 @@
 
 5. Check if it is working as expected
 
+    With PDF:
+
     ```shell
-    curl 'http://localhost:3000/?url=https%3A%2F%2Ffailai.viespirkiai.top%2F2007731419%2F2007731420&apiKey=your_api_key_here'
+    curl 'http://localhost:3000/?url=https%3A%2F%2Ffailai.viespirkiai.top%2F2007731419%2F2007731420&extension=pdf&apiKey=your_api_key_here'
+    ```
+
+    With DOCX:
+
+    ```shell
+    curl 'http://localhost:3000/?url=https%3A%2F%2Ffailai.viespirkiai.top%2F2007766532%2F2007766545&extension=docx&apiKey=your_api_key_here'
     ```
 
     Do not forget to pass your actual API key in the URL!
