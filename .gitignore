@@ -8,3 +8,4 @@
 # Also ignore the following
 data
 node_modules
+tmp

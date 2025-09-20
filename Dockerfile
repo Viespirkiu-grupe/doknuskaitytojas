@@ -1,7 +1,7 @@
 FROM node:trixie-slim
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y poppler-utils tini && \
+    apt-get install --no-install-recommends -y poppler-utils tini libreoffice && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
