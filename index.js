@@ -9,7 +9,7 @@ import dotenv from "dotenv";
 
 dotenv.config({ quiet: true }); // Load .env
 
-const TMP_DIR = path.resolve("../tmp");
+const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
 
 const app = express();

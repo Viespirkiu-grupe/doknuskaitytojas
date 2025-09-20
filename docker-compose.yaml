@@ -1,0 +1,14 @@
+services:
+  viesdoknuskaitytojas:
+    build: .
+    image: viesdoknuskaitytojas
+    container_name: viesdoknuskaitytojas
+    restart: unless-stopped
+    env_file:
+      - env
+    ports:
+      # - "host_port:container_port"
+      - "${PORT:-3000}:${PORT:-3000}"
+    # Uncomment to persist data on the host between container restarts
+    # volumes:
+    #   - ./data:/app/tmp

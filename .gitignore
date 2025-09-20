@@ -1,2 +1,10 @@
+# Ignore dot-files
+.*
+
+# Except for the following
+!.gitignore
+!.dockerignore
+
+# Also ignore the following
+data
 node_modules
-.env
