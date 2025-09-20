@@ -77,6 +77,7 @@ async function extractPdfContent(url) {
     const emailsMap = new Map(); // key: email, value: Set of page numbers
     const jarKodaiSet = new Set();
     const ibanSet = new Set();
+    const sloppyRedactionsInPages = new Set();
 
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -123,6 +124,17 @@ async function extractPdfContent(url) {
             const emailSet = emailsMap.get(email) || new Set();
             emailSet.add(i);
             emailsMap.set(email, emailSet);
+        }
+
+        try {
+            const overlapTolerance = 5;
+            const hasSloppyRedactions = await searchForSloppyRedactionsInPage(page, overlapTolerance, content.items, annots);
+
+            if (hasSloppyRedactions) {
+                sloppyRedactionsInPages.add(i);
+            }
+        } catch (e) {
+            console.error(e);
         }
     }
 
@@ -176,7 +188,7 @@ async function extractPdfContent(url) {
 
     metadata = cleanMetadata(metadata);
 
-    return { pages, metadata };
+    return { pages, metadata, sloppyRedactions: [...sloppyRedactionsInPages.values()] };
 }
 
 async function runPdfSig(filePath) {
@@ -282,6 +294,65 @@ function cleanMetadata(obj) {
         }
     }
     return obj;
+}
+
+async function searchForSloppyRedactionsInPage(pdfPage, tolerance, textContent, annotations) {
+    const pageExtents = pdfPage.view;
+
+    textContent ??= (await pdfPage.getTextContent()).items;
+
+    annotations ??= await pdfPage.getAnnotations();
+
+    const coveredAreas = annotations.reduce((areas, annot) => {
+        // ignore TEXT | LINK | FREETEXT annotations
+        if ([1, 2, 3].includes(annot.annotationType)) {
+            return areas;
+        }
+
+        if (annot.rotation) {
+            console.error(`Rotated annotations not supported 🙃`);
+            return areas;
+        }
+
+        areas.push({
+            rotation: annot.rotation,
+            extentsLTRB: annot.rect,
+        });
+
+        return areas;
+    }, []);
+
+    return textContent.some((item) => {
+        const { str, width, height, transform } = item;
+        if (!str?.trim()) {
+            return false;
+        }
+
+        const extentL = transform[4];
+        const extentT = transform[5];
+
+        const extentsLTRB = [extentL, extentT, extentL + width, extentT + height];
+
+        return coveredAreas.some((area) => {
+            const testLTRB = area.extentsLTRB;
+
+            if (testLTRB[0] - extentsLTRB[2] > tolerance) {
+                return false;
+            }
+            if (testLTRB[1] - extentsLTRB[3] > tolerance) {
+                return false;
+            }
+
+            if (testLTRB[2] - extentsLTRB[0] < tolerance) {
+                return false;
+            }
+            if (testLTRB[3] - extentsLTRB[1] < tolerance) {
+                return false;
+            }
+
+            return true;
+        });
+    });
 }
 
 app.listen(PORT, () => {
