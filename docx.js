@@ -17,24 +17,30 @@ try {
 }
 
 /**
- * Convert DOCX file to PDF buffer using LibreOffice
+ * Convert DOCX file to PDF buffer using LibreOffice with 2.5 min timeout
+ * Cleans up temp PDF on failure or timeout
  * @param {string} docxPath
  */
 async function convertDocxToPdfBuffer(docxPath) {
-  await execFileAsync("libreoffice", [
-    "--headless",
-    "--convert-to",
-    "pdf",
-    "--outdir",
-    TMP_DIR,
-    docxPath,
-  ]);
+  const pdfPath = docxPath.replace(/\.docx$/i, ".pdf");
 
-  // Read PDF into buffer and delete temp file
-  const buffer = await fs.readFile(docxPath.replace(/\.docx$/i, ".pdf"));
-  await fs.unlink(docxPath.replace(/\.docx$/i, ".pdf"));
+  try {
+    await execFileAsync(
+      "libreoffice",
+      ["--headless", "--convert-to", "pdf", "--outdir", TMP_DIR, docxPath],
+      { timeout: 150_000 }, // 2.5 minutes in ms
+    );
 
-  return buffer;
+    const buffer = await fs.readFile(pdfPath);
+    await fs.unlink(pdfPath);
+    return buffer;
+  } catch (err) {
+    // Attempt to remove PDF if it exists, ignore errors
+    try {
+      await fs.unlink(pdfPath);
+    } catch {}
+    throw err; // re-throw the original error
+  }
 }
 
 /**
