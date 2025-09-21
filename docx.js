@@ -1,13 +1,10 @@
 import fs from "fs/promises";
 import path from "path";
-import { execFile } from "child_process";
-import { promisify } from "util";
+import { spawn } from "child_process";
 import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import { parseStringPromise } from "xml2js";
-
-const execFileAsync = promisify(execFile);
 
 const TMP_DIR = path.resolve("./tmp");
 try {
@@ -17,29 +14,53 @@ try {
 }
 
 /**
- * Convert DOCX file to PDF buffer using LibreOffice with 2.5 min timeout
+ * Convert DOCX file to PDF buffer using LibreOffice with 2.5 min hard kill
  * Cleans up temp PDF on failure or timeout
  * @param {string} docxPath
  */
-async function convertDocxToPdfBuffer(docxPath) {
-  const pdfPath = docxPath.replace(/\.docx$/i, ".pdf");
+export async function convertDocxToPdfBuffer(docxPath) {
+  const pdfPath = path.join(TMP_DIR, path.basename(docxPath, ".docx") + ".pdf");
+
+  let child;
+  const promise = new Promise((resolve, reject) => {
+    child = spawn("libreoffice", [
+      "--headless",
+      "--convert-to",
+      "pdf",
+      "--outdir",
+      TMP_DIR,
+      docxPath,
+    ]);
+
+    child.on("error", reject);
+
+    child.on("exit", async (code) => {
+      try {
+        if (code !== 0) {
+          return reject(new Error(`LibreOffice exited with code ${code}`));
+        }
+        const buffer = await fs.readFile(pdfPath);
+        await fs.unlink(pdfPath).catch(() => {});
+        resolve(buffer);
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+
+  // Force kill after 1 minute
+  const timer = setTimeout(() => {
+    if (child) {
+      child.kill("SIGKILL");
+    }
+  }, 60_000);
 
   try {
-    await execFileAsync(
-      "libreoffice",
-      ["--headless", "--convert-to", "pdf", "--outdir", TMP_DIR, docxPath],
-      { timeout: 150_000 }, // 2.5 minutes in ms
-    );
-
-    const buffer = await fs.readFile(pdfPath);
-    await fs.unlink(pdfPath);
-    return buffer;
-  } catch (err) {
-    // Attempt to remove PDF if it exists, ignore errors
-    try {
-      await fs.unlink(pdfPath);
-    } catch {}
-    throw err; // re-throw the original error
+    return await promise;
+  } finally {
+    clearTimeout(timer);
+    // Best-effort cleanup
+    await fs.unlink(pdfPath).catch(() => {});
   }
 }
 
