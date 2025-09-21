@@ -17,6 +17,11 @@ const API_KEY = process.env.API_KEY;
 
 const versija = 4;
 
+// Health check endpoint
+app.get('/healthz', (req, res) => {
+  res.status(200).send('OK');
+});
+
 // GET /?url=...&apiKey=...&extension=pdf||docx
 app.get("/", async (req, res) => {
   const { url, apiKey } = req.query;
