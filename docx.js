@@ -15,7 +15,7 @@ try {
 }
 
 /**
- * Convert DOCX file to PDF buffer using LibreOffice with 2.5 min hard kill
+ * Convert DOCX file to PDF buffer using LibreOffice with 1 min hard kill
  * Cleans up temp PDF on failure or timeout
  * @param {string} docxPath
  */
@@ -52,6 +52,7 @@ export async function convertDocxToPdfBuffer(docxPath) {
   // Force kill after 1 minute (kill process tree)
   const timer = setTimeout(() => {
     if (child && child.pid) {
+      console.warn(`Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${docxPath}`);
       treeKill(child.pid, 'SIGKILL');
     }
   }, 60_000);
