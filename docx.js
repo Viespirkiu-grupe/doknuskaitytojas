@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { spawn } from "child_process";
+import treeKill from "tree-kill";
 import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
@@ -40,7 +41,7 @@ export async function convertDocxToPdfBuffer(docxPath) {
           return reject(new Error(`LibreOffice exited with code ${code}`));
         }
         const buffer = await fs.readFile(pdfPath);
-        await fs.unlink(pdfPath).catch(() => {});
+        await fs.unlink(pdfPath).catch(() => { });
         resolve(buffer);
       } catch (err) {
         reject(err);
@@ -48,10 +49,10 @@ export async function convertDocxToPdfBuffer(docxPath) {
     });
   });
 
-  // Force kill after 1 minute
+  // Force kill after 1 minute (kill process tree)
   const timer = setTimeout(() => {
-    if (child) {
-      child.kill("SIGKILL");
+    if (child && child.pid) {
+      treeKill(child.pid, 'SIGKILL');
     }
   }, 60_000);
 
@@ -60,7 +61,7 @@ export async function convertDocxToPdfBuffer(docxPath) {
   } finally {
     clearTimeout(timer);
     // Best-effort cleanup
-    await fs.unlink(pdfPath).catch(() => {});
+    await fs.unlink(pdfPath).catch(() => { });
   }
 }
 
