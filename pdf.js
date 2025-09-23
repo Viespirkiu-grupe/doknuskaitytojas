@@ -111,14 +111,14 @@ export async function extractPdfContent(input, options = {}) {
 
     // Phone numbers
     let lithuanianNumberRegex =
-      /((^|[^0-9])((?:[\s\-.\(]*)(?:(?:\+370|370|8|0)[\s\-\.\(\)]*)?(?:6(?:[\s\-\.\(\)]*\d){7}|[2-7](?:[\s\-\.\(\)]*\d){7}|[2-7]\d(?:[\s\-\.\(\)]*\d){6}))(?!\d))/gm;
-
+      /((?:^|[^0-9])((?:[\(]*)(?:(?:\+370|370|8|0)[\s\-.\(\)]*)?(?:6(?:[\s\-.\(\)]*\d){7}|[2-7](?:[\s\-.\(\)]*\d){7}|[2-7]\d(?:[\s\-.\(\)]*\d){6}))(?!\d))/gm;
     const foundPhones = normalizedText.match(lithuanianNumberRegex) || [];
 
     // Loop over phones, clean them up and add to set
     // Convert all forms to +370XXXXXXX
     for (let phone of foundPhones) {
       let cleaned = phone.replace(/[\s\-\.\(\)]/g, "");
+      cleaned = cleaned.replaceAll(":", "");
       if (cleaned.startsWith("+370")) {
         // do nothing
       } else if (cleaned.startsWith("370")) {
@@ -192,7 +192,8 @@ export async function extractPdfContent(input, options = {}) {
   for (const link of links) {
     try {
       const url = new URL(link.uri);
-      if (url.hostname) domains.add(url.hostname.toLowerCase());
+      if (url.hostname)
+        domains.add(url.hostname.toLowerCase().replace("www.", ""));
     } catch (e) {
       // ignore invalid URLs
     }

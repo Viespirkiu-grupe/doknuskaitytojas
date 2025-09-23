@@ -31,6 +31,8 @@ app.get("/healthz", (req, res) => {
 app.get("/", async (req, res) => {
   const { url, apiKey } = req.query;
 
+  console.log(url);
+
   if (!url) {
     return res.status(400).json({ error: "Missing url parameter" });
   }
