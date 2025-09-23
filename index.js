@@ -20,7 +20,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 
-const versija = 4;
+const versija = 5;
 
 // Health check endpoint
 app.get("/healthz", (req, res) => {
