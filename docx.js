@@ -6,12 +6,13 @@ import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import { parseStringPromise } from "xml2js";
+import { log } from "./utils/log.js";
 
 const TMP_DIR = path.resolve("./tmp");
 try {
   await fs.mkdir(TMP_DIR, { recursive: true });
 } catch (err) {
-  console.error("Failed to create TMP_DIR:", err);
+  log("Failed to create TMP_DIR:", err);
 }
 
 /**
@@ -41,7 +42,7 @@ export async function convertDocxToPdfBuffer(docxPath) {
           return reject(new Error(`LibreOffice exited with code ${code}`));
         }
         const buffer = await fs.readFile(pdfPath);
-        await fs.unlink(pdfPath).catch(() => { });
+        await fs.unlink(pdfPath).catch(() => {});
         resolve(buffer);
       } catch (err) {
         reject(err);
@@ -50,19 +51,24 @@ export async function convertDocxToPdfBuffer(docxPath) {
   });
 
   // Force kill after 1 minute (kill process tree)
-  const timer = setTimeout(() => {
-    if (child && child.pid) {
-      console.warn(`Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${docxPath}`);
-      treeKill(child.pid, 'SIGKILL');
-    }
-  }, 60_000);
+  const timer = setTimeout(
+    () => {
+      if (child && child.pid) {
+        log(
+          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${docxPath}`,
+        );
+        treeKill(child.pid, "SIGKILL");
+      }
+    },
+    parseInt(process.env.LIBREOFFICE_TIMEOUT ?? "15", 10) * 1000,
+  );
 
   try {
     return await promise;
   } finally {
     clearTimeout(timer);
     // Best-effort cleanup
-    await fs.unlink(pdfPath).catch(() => { });
+    await fs.unlink(pdfPath).catch(() => {});
   }
 }
 

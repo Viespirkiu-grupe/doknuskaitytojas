@@ -2,6 +2,7 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+import { log } from "./utils/log.js";
 
 import { extractPdfContent } from "./pdf.js";
 import { extractDocxContent } from "./docx.js";
@@ -19,6 +20,7 @@ if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
 const app = express();
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
+process.env.LIBREOFFICE_TIMEOUT = String(process.env.LIBREOFFICE_TIMEOUT || 15);
 
 const versija = 5;
 
@@ -31,7 +33,7 @@ app.get("/healthz", (req, res) => {
 app.get("/", async (req, res) => {
   const { url, apiKey } = req.query;
 
-  console.log(url);
+  log(url);
 
   if (!url) {
     return res.status(400).json({ error: "Missing url parameter" });
@@ -104,5 +106,5 @@ app.get("/", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+  log(`Server listening on port ${PORT}`);
 });

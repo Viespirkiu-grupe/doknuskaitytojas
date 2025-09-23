@@ -6,12 +6,13 @@ import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import { parseStringPromise } from "xml2js";
+import { log } from "./utils/log.js";
 
 const TMP_DIR = path.resolve("./tmp");
 try {
   await fs.mkdir(TMP_DIR, { recursive: true });
 } catch (err) {
-  console.error("Failed to create TMP_DIR:", err);
+  log("Failed to create TMP_DIR:", err);
 }
 
 /**
@@ -48,14 +49,17 @@ export async function convertPptxToPdfBuffer(pptxPath) {
     });
   });
 
-  const timer = setTimeout(() => {
-    if (child && child.pid) {
-      console.warn(
-        `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${pptxPath}`,
-      );
-      treeKill(child.pid, "SIGKILL");
-    }
-  }, 60_000);
+  const timer = setTimeout(
+    () => {
+      if (child && child.pid) {
+        log(
+          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${pptxPath}`,
+        );
+        treeKill(child.pid, "SIGKILL");
+      }
+    },
+    parseInt(process.env.LIBREOFFICE_TIMEOUT ?? "15", 10) * 1000,
+  );
 
   try {
     return await promise;

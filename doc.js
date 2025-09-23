@@ -37,9 +37,12 @@ export async function convertDocToPdfBuffer(docPath) {
     });
   });
 
-  const timer = setTimeout(() => {
-    if (child?.pid) treeKill(child.pid, "SIGKILL");
-  }, 60_000);
+  const timer = setTimeout(
+    () => {
+      if (child?.pid) treeKill(child.pid, "SIGKILL");
+    },
+    parseInt(process.env.LIBREOFFICE_TIMEOUT ?? "15", 10) * 1000,
+  );
 
   try {
     return await promise;

@@ -4,6 +4,7 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { Buffer } from "buffer";
 import { randomUUID } from "crypto";
 import path from "path";
+import { log } from "./utils/log.js";
 
 const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
@@ -23,7 +24,7 @@ export async function extractPdfContent(input, options = {}) {
     buffer = Buffer.from(arrayBuffer);
   }
 
-  console.log(`1. Fetchpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
+  log(`1. Fetchpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
   start = new Date();
 
   let signatureInfo = null;
@@ -36,7 +37,7 @@ export async function extractPdfContent(input, options = {}) {
     fs.unlinkSync(tmpFile);
   }
 
-  console.log(`2. Signpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
+  log(`2. Signpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
   start = new Date();
 
   // Load PDF in memory
@@ -221,7 +222,7 @@ export async function extractPdfContent(input, options = {}) {
   // const ibanNumeriai = Array.from(ibanSet);
   // const telefonai = Array.from(telefonaiSet);
 
-  console.log(`3. PDFJS took ${((new Date() - start) / 1000).toFixed(3)}s`);
+  log(`3. PDFJS took ${((new Date() - start) / 1000).toFixed(3)}s`);
   start = new Date();
 
   if (!options.skipPdfMetadata) {
@@ -257,7 +258,7 @@ export async function extractPdfContent(input, options = {}) {
   }
   metadata.sloppyRedactions = [...sloppyRedactionsInPages.values()];
 
-  console.log(`4. Metadata took ${((new Date() - start) / 1000).toFixed(3)}s`);
+  log(`4. Metadata took ${((new Date() - start) / 1000).toFixed(3)}s`);
   start = new Date();
 
   metadata = cleanMetadata(metadata);
@@ -390,7 +391,7 @@ async function searchForSloppyRedactionsInPage(
     }
 
     if (annot.rotation) {
-      console.error(`Rotated annotations not supported 🙃`);
+      log(`Rotated annotations not supported 🙃`);
       return areas;
     }
 
