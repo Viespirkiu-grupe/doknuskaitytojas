@@ -5,6 +5,11 @@ import dotenv from "dotenv";
 
 import { extractPdfContent } from "./pdf.js";
 import { extractDocxContent } from "./docx.js";
+import { extractXlsxContent } from "./xlsx.js";
+import { extractPptxContent } from "./pptx.js";
+import { extractDocContent } from "./doc.js";
+import { extractXlsContent } from "./xls.js";
+import { extractPptContent } from "./ppt.js";
 
 dotenv.config({ quiet: true }); // Load .env
 
@@ -18,8 +23,8 @@ const API_KEY = process.env.API_KEY;
 const versija = 4;
 
 // Health check endpoint
-app.get('/healthz', (req, res) => {
-  res.status(200).send('OK');
+app.get("/healthz", (req, res) => {
+  res.status(200).send("OK");
 });
 
 // GET /?url=...&apiKey=...&extension=pdf||docx
@@ -36,7 +41,9 @@ app.get("/", async (req, res) => {
 
   // Check extension parameter to be either pdf or docx
   const extension = (req.query.extension || "pdf").toLowerCase();
-  if (!["pdf", "docx"].includes(extension)) {
+  if (
+    !["pdf", "docx", "xlsx", "pptx", "doc", "xls", "ppt"].includes(extension)
+  ) {
     return res
       .status(400)
       .json({ error: "Invalid extension parameter, should be pdf or docx" });
@@ -52,6 +59,41 @@ app.get("/", async (req, res) => {
   } else if (extension === "pdf") {
     try {
       const result = await extractPdfContent(url);
+      res.json({ success: true, result, versija });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  } else if (extension === "xlsx") {
+    try {
+      const result = await extractXlsxContent(url);
+      res.json({ success: true, result, versija });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  } else if (extension === "pptx") {
+    try {
+      const result = await extractPptxContent(url);
+      res.json({ success: true, result, versija });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  } else if (extension === "doc") {
+    try {
+      const result = await extractDocContent(url);
+      res.json({ success: true, result, versija });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  } else if (extension === "xls") {
+    try {
+      const result = await extractXlsContent(url);
+      res.json({ success: true, result, versija });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  } else if (extension === "ppt") {
+    try {
+      const result = await extractPptContent(url);
       res.json({ success: true, result, versija });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
