@@ -6,7 +6,7 @@ import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import { parseStringPromise } from "xml2js";
-import { log } from "./utils/log.js";
+import { log } from "../utils/log.js";
 
 const TMP_DIR = path.resolve("./tmp");
 try {
@@ -16,11 +16,11 @@ try {
 }
 
 /**
- * Convert PPTX file to PDF buffer using LibreOffice with 1 min hard kill
- * @param {string} pptxPath
+ * Convert XLSX file to PDF buffer using LibreOffice with 1 min hard kill
+ * @param {string} xlsxPath
  */
-export async function convertPptxToPdfBuffer(pptxPath) {
-  const pdfPath = path.join(TMP_DIR, path.basename(pptxPath, ".pptx") + ".pdf");
+export async function convertXlsxToPdfBuffer(xlsxPath) {
+  const pdfPath = path.join(TMP_DIR, path.basename(xlsxPath, ".xlsx") + ".pdf");
 
   let child;
   const promise = new Promise((resolve, reject) => {
@@ -30,7 +30,7 @@ export async function convertPptxToPdfBuffer(pptxPath) {
       "pdf",
       "--outdir",
       TMP_DIR,
-      pptxPath,
+      xlsxPath,
     ]);
 
     child.on("error", reject);
@@ -53,7 +53,7 @@ export async function convertPptxToPdfBuffer(pptxPath) {
     () => {
       if (child && child.pid) {
         log(
-          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${pptxPath}`,
+          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${xlsxPath}`,
         );
         treeKill(child.pid, "SIGKILL");
       }
@@ -70,25 +70,25 @@ export async function convertPptxToPdfBuffer(pptxPath) {
 }
 
 /**
- * Extract PPTX content using PDF pipeline
- * @param {string} url PPTX file URL
+ * Extract XLSX content using PDF pipeline
+ * @param {string} url XLSX file URL
  */
-export async function extractPptxContent(url) {
-  // 1. Download PPTX
+export async function extractXlsxContent(url) {
+  // 1. Download XLSX
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
   const arrayBuffer = await res.arrayBuffer();
-  const pptxBuffer = Buffer.from(arrayBuffer);
+  const xlsxBuffer = Buffer.from(arrayBuffer);
 
-  const tmpPptx = path.join(TMP_DIR, `${randomUUID()}.pptx`);
-  await fs.writeFile(tmpPptx, pptxBuffer);
+  const tmpXlsx = path.join(TMP_DIR, `${randomUUID()}.xlsx`);
+  await fs.writeFile(tmpXlsx, xlsxBuffer);
 
   try {
-    // Convert PPTX → PDF buffer
-    const pdfBuffer = await convertPptxToPdfBuffer(tmpPptx);
+    // Convert XLSX → PDF buffer
+    const pdfBuffer = await convertXlsxToPdfBuffer(tmpXlsx);
 
-    // Extract PPTX metadata
-    const metadata = await extractPptxMetadata(tmpPptx);
+    // Extract XLSX metadata
+    const metadata = await extractXlsxMetadata(tmpXlsx);
 
     // Run PDF extractor
     let result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
@@ -97,16 +97,16 @@ export async function extractPptxContent(url) {
 
     return result;
   } finally {
-    await fs.unlink(tmpPptx).catch(() => {});
+    await fs.unlink(tmpXlsx).catch(() => {});
   }
 }
 
 /**
- * Extract metadata from PPTX
- * @param {string} pptxPath
+ * Extract metadata from XLSX
+ * @param {string} xlsxPath
  */
-export async function extractPptxMetadata(pptxPath) {
-  const zip = new AdmZip(await fs.readFile(pptxPath));
+export async function extractXlsxMetadata(xlsxPath) {
+  const zip = new AdmZip(await fs.readFile(xlsxPath));
   let metadata = {};
 
   // 1. Core properties
@@ -168,7 +168,7 @@ export async function extractPptxMetadata(pptxPath) {
   delete metadata.Characters;
   metadata.wordCount = metadata.Words || 0;
   delete metadata.Words;
-  delete metadata.Slides;
+  delete metadata.Pages;
   metadata.paragraphCount = metadata.Paragraphs || 0;
   delete metadata.Paragraphs;
   if (!metadata.Author) {

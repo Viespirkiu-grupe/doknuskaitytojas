@@ -6,7 +6,7 @@ import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import { parseStringPromise } from "xml2js";
-import { log } from "./utils/log.js";
+import { log } from "../utils/log.js";
 
 const TMP_DIR = path.resolve("./tmp");
 try {
@@ -16,11 +16,12 @@ try {
 }
 
 /**
- * Convert XLSX file to PDF buffer using LibreOffice with 1 min hard kill
- * @param {string} xlsxPath
+ * Convert DOCX file to PDF buffer using LibreOffice with 1 min hard kill
+ * Cleans up temp PDF on failure or timeout
+ * @param {string} docxPath
  */
-export async function convertXlsxToPdfBuffer(xlsxPath) {
-  const pdfPath = path.join(TMP_DIR, path.basename(xlsxPath, ".xlsx") + ".pdf");
+export async function convertDocxToPdfBuffer(docxPath) {
+  const pdfPath = path.join(TMP_DIR, path.basename(docxPath, ".docx") + ".pdf");
 
   let child;
   const promise = new Promise((resolve, reject) => {
@@ -30,7 +31,7 @@ export async function convertXlsxToPdfBuffer(xlsxPath) {
       "pdf",
       "--outdir",
       TMP_DIR,
-      xlsxPath,
+      docxPath,
     ]);
 
     child.on("error", reject);
@@ -49,11 +50,12 @@ export async function convertXlsxToPdfBuffer(xlsxPath) {
     });
   });
 
+  // Force kill after 1 minute (kill process tree)
   const timer = setTimeout(
     () => {
       if (child && child.pid) {
         log(
-          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${xlsxPath}`,
+          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${docxPath}`,
         );
         treeKill(child.pid, "SIGKILL");
       }
@@ -65,30 +67,32 @@ export async function convertXlsxToPdfBuffer(xlsxPath) {
     return await promise;
   } finally {
     clearTimeout(timer);
+    // Best-effort cleanup
     await fs.unlink(pdfPath).catch(() => {});
   }
 }
 
 /**
- * Extract XLSX content using PDF pipeline
- * @param {string} url XLSX file URL
+ * Extract DOCX content using PDF pipeline
+ * @param {string} url DOCX file URL
  */
-export async function extractXlsxContent(url) {
-  // 1. Download XLSX
+export async function extractDocxContent(url) {
+  // 1. Download DOCX
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
   const arrayBuffer = await res.arrayBuffer();
-  const xlsxBuffer = Buffer.from(arrayBuffer);
+  const docxBuffer = Buffer.from(arrayBuffer);
 
-  const tmpXlsx = path.join(TMP_DIR, `${randomUUID()}.xlsx`);
-  await fs.writeFile(tmpXlsx, xlsxBuffer);
+  const tmpDocx = path.join(TMP_DIR, `${randomUUID()}.docx`);
+
+  await fs.writeFile(tmpDocx, docxBuffer);
 
   try {
-    // Convert XLSX → PDF buffer
-    const pdfBuffer = await convertXlsxToPdfBuffer(tmpXlsx);
+    // Convert DOCX → PDF buffer
+    const pdfBuffer = await convertDocxToPdfBuffer(tmpDocx);
 
-    // Extract XLSX metadata
-    const metadata = await extractXlsxMetadata(tmpXlsx);
+    // Extract DOCX metadata
+    const metadata = await extractDocxMetadata(tmpDocx);
 
     // Run PDF extractor
     let result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
@@ -97,16 +101,16 @@ export async function extractXlsxContent(url) {
 
     return result;
   } finally {
-    await fs.unlink(tmpXlsx).catch(() => {});
+    await fs.unlink(tmpDocx); // cleanup DOCX
   }
 }
 
 /**
- * Extract metadata from XLSX
- * @param {string} xlsxPath
+ * Extract metadata from DOCX
+ * @param {string} docxPath
  */
-export async function extractXlsxMetadata(xlsxPath) {
-  const zip = new AdmZip(await fs.readFile(xlsxPath));
+export async function extractDocxMetadata(docxPath) {
+  const zip = new AdmZip(await fs.readFile(docxPath));
   let metadata = {};
 
   // 1. Core properties
@@ -148,11 +152,11 @@ export async function extractXlsxMetadata(xlsxPath) {
     }
   }
 
-  // Normalize metadata keys
   if (metadata.created && metadata.created._) {
     metadata.CreationDate = metadata.created._;
     delete metadata.created;
   }
+
   if (metadata.modified && metadata.modified._) {
     metadata.ModifiedDate = metadata.modified._;
     delete metadata.modified;

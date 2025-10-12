@@ -8,6 +8,11 @@ import { randomUUID } from "crypto";
 const TMP_DIR = path.resolve("./tmp");
 await fs.mkdir(TMP_DIR, { recursive: true });
 
+/**
+ * Convert a .doc file to PDF using LibreOffice and return the PDF as a Buffer.
+ * @param {string} docPath - Path to the .doc file.
+ * @returns {Promise<Buffer>} - Promise that resolves to the PDF file as a Buffer.
+ */
 export async function convertDocToPdfBuffer(docPath) {
   const pdfPath = path.join(TMP_DIR, path.basename(docPath, ".doc") + ".pdf");
 
@@ -52,6 +57,12 @@ export async function convertDocToPdfBuffer(docPath) {
   }
 }
 
+/**
+ * Extract text content and metadata from a .doc file at the given URL.
+ * Converts the .doc file to PDF using LibreOffice, then extracts content from the PDF.
+ * @param {string} url - URL of the .doc file.
+ * @returns {Promise<{ text: string, metadata: object }>} - Promise that resolves to an object containing extracted text and metadata.
+ */
 export async function extractDocContent(url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);

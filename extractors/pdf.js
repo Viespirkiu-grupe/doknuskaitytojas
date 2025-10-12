@@ -4,13 +4,16 @@ import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { Buffer } from "buffer";
 import { randomUUID } from "crypto";
 import path from "path";
-import { log } from "./utils/log.js";
+import { log } from "../utils/log.js";
+import { gautiViskaIsTeksto } from "../parsers/viskas.js";
 
 const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
 
 export async function extractPdfContent(input, options = {}) {
   let start = new Date();
+
+  //// Get the PDF file
   let buffer;
 
   // Determine if input is a Buffer or URL
@@ -25,6 +28,8 @@ export async function extractPdfContent(input, options = {}) {
   }
 
   log(`1. Fetchpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
+
+  //// Extract PDF Signatures
   start = new Date();
 
   let signatureInfo = null;
@@ -33,11 +38,13 @@ export async function extractPdfContent(input, options = {}) {
     fs.writeFileSync(tmpFile, buffer);
 
     signatureInfo = await runPdfSig(tmpFile);
-  } catch (e) {
+  } finally {
     fs.unlinkSync(tmpFile);
   }
 
   log(`2. Signpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
+
+  //// Extract PDF content & metadata
   start = new Date();
 
   // Load PDF in memory
@@ -50,9 +57,6 @@ export async function extractPdfContent(input, options = {}) {
   const pages = [];
   const linksMap = new Map(); // key: uri, value: Set of page numbers
   const emailsMap = new Map(); // key: email, value: Set of page numbers
-  const jarKodaiMap = new Map(); // key: code, value: Set of page numbers
-  const ibanMap = new Map(); // key: iban, value: Set of page numbers
-  const telefonaiMap = new Map(); // key: phone, value: Set of page numbers
   const sloppyRedactionsInPages = new Set();
 
   for (let i = 1; i <= pdf.numPages; i++) {
@@ -81,150 +85,11 @@ export async function extractPdfContent(input, options = {}) {
         }
       }
     }
-
-    // Extract 9-digit codes
-    const foundCodes = normalizedText.match(/\b\d{9}\b/g) || [];
-    // foundCodes.forEach((code) => jarKodaiSet.add(code));
-    for (const code of foundCodes) {
-      const codeSet = jarKodaiMap.get(code) || new Set();
-      codeSet.add(i);
-      jarKodaiMap.set(code, codeSet);
-    }
-
-    // Extract IBANs (basic regex)
-    const foundIbans =
-      normalizedText.match(/\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/g) || [];
-    // foundIbans.forEach((iban) => ibanSet.add(iban));
-    for (const iban of foundIbans) {
-      const ibanSet = ibanMap.get(iban) || new Set();
-      ibanSet.add(i);
-      ibanMap.set(iban, ibanSet);
-    }
-
-    // Emails in text
-    const foundEmails =
-      normalizedText.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi) || [];
-    for (const email of foundEmails) {
-      const emailSet = emailsMap.get(email) || new Set();
-      emailSet.add(i);
-      emailsMap.set(email, emailSet);
-    }
-
-    // Phone numbers
-    let lithuanianNumberRegex =
-      /((?:^|[^0-9])((?:[\(]*)(?:(?:\+370|370|8|0)[\s\-.\(\)]*)?(?:6(?:[\s\-.\(\)]*\d){7}|[2-7](?:[\s\-.\(\)]*\d){7}|[2-7]\d(?:[\s\-.\(\)]*\d){6}))(?!\d))/gm;
-    const foundPhones = normalizedText.match(lithuanianNumberRegex) || [];
-
-    // Loop over phones, clean them up and add to set
-    // Convert all forms to +370XXXXXXX
-    for (let phone of foundPhones) {
-      let cleaned = phone.replace(/[\s\-\.\(\)]/g, "");
-      cleaned = cleaned.replaceAll(":", "");
-      if (cleaned.startsWith("+370")) {
-        // do nothing
-      } else if (cleaned.startsWith("370")) {
-        cleaned = "+" + cleaned;
-      } else if (cleaned.startsWith("8")) {
-        cleaned = "+370" + cleaned.slice(1);
-      } else if (cleaned.startsWith("0")) {
-        cleaned = "+370" + cleaned.slice(1);
-      } else if (cleaned.match(/^6\d{7}$/)) {
-        cleaned = "+370" + cleaned;
-      } else if (cleaned.match(/^[2-7]\d{7}$/)) {
-        cleaned = "+370" + cleaned;
-      } else if (cleaned.match(/^[2-7]\d{6}$/)) {
-        cleaned = "+370" + cleaned;
-      } else {
-        continue; // skip unrecognized formats
-      }
-
-      const phoneSet = telefonaiMap.get(cleaned) || new Set();
-      phoneSet.add(i);
-      telefonaiMap.set(cleaned, phoneSet);
-    }
-
-    let internationalNumberRegex =
-      /\+(9[976]\d|8[987530]\d|6[987]\d|5[90]\d|42\d|3[875]\d|2[98654321]\d|9[8543210]|8[6421]|6[6543210]|5[87654321]|4[987654310] | 3[9643210] | 2[70] | 7 | 1) \d{ 1, 14 } $/gm;
-
-    const foundInternationalPhones =
-      normalizedText.match(internationalNumberRegex) || [];
-
-    for (let phone of foundInternationalPhones) {
-      let cleaned = phone.replace(/[\s\-\.\(\)]/g, "");
-      const phoneSet = telefonaiMap.get(cleaned) || new Set();
-      phoneSet.add(i);
-      telefonaiMap.set(cleaned, phoneSet);
-    }
-
-    // Sloppy redactions
-    try {
-      const overlapTolerance = 5;
-      const hasSloppyRedactions = await searchForSloppyRedactionsInPage(
-        page,
-        overlapTolerance,
-        content.items,
-        annots,
-      );
-
-      if (hasSloppyRedactions) {
-        sloppyRedactionsInPages.add(i);
-      }
-    } catch (e) {
-      console.error(e);
-    }
   }
-
-  // Deduplicate
-  const links = Array.from(linksMap.entries()).map(([uri, pages]) => ({
-    uri,
-    pages: Array.from(pages).sort((a, b) => a - b),
-  }));
-  const emails = Array.from(emailsMap.entries()).map(([email, pages]) => ({
-    email,
-    pages: Array.from(pages).sort((a, b) => a - b),
-  }));
-
-  // Domains from both emails and links
-  const domains = new Set();
-  for (const email of emails) {
-    const domain = email.email.split("@")[1];
-    if (domain) domains.add(domain.toLowerCase());
-  }
-  for (const link of links) {
-    try {
-      const url = new URL(link.uri);
-      if (url.hostname)
-        domains.add(url.hostname.toLowerCase().replace("www.", ""));
-    } catch (e) {
-      // ignore invalid URLs
-    }
-  }
-
-  // Sort domains
-  const sortedDomains = Array.from(domains).sort((a, b) => a.localeCompare(b));
-
-  const jarKodai = Array.from(jarKodaiMap.entries()).map(([code, pages]) => ({
-    code,
-    pages: Array.from(pages).sort((a, b) => a - b),
-  }));
-  const ibanNumeriai = Array.from(ibanMap.entries()).map(([iban, pages]) => ({
-    iban,
-    pages: Array.from(pages).sort((a, b) => a - b),
-  }));
-  const telefonai = Array.from(telefonaiMap.entries()).map(
-    ([phone, pages]) => ({
-      phone,
-      pages: Array.from(pages).sort((a, b) => a - b),
-    }),
-  );
-
-  // const jarKodai = Array.from(jarKodaiSet);
-  // const ibanNumeriai = Array.from(ibanSet);
-  // const telefonai = Array.from(telefonaiSet);
-
   log(`3. PDFJS took ${((new Date() - start) / 1000).toFixed(3)}s`);
-  start = new Date();
 
+  /// Surašome metadata
+  // Pridedame PDF metadata
   if (!options.skipPdfMetadata) {
     var meta = await pdf.getMetadata();
     var metadata = Object.fromEntries(
@@ -236,31 +101,68 @@ export async function extractPdfContent(input, options = {}) {
         return [key, value];
       }),
     );
-
-    metadata.characterCount = pages.reduce((acc, page) => acc + page.length, 0);
-    metadata.wordCount = pages.reduce((acc, page) => {
-      const words = page.trim().split(/\s+/).filter(Boolean); // remove empty strings
-      return acc + words.length;
-    }, 0);
   } else {
     var metadata = {};
   }
 
-  metadata.pageCount = pdf.numPages;
-  metadata.links = links;
-  metadata.emails = emails;
-  metadata.domains = sortedDomains;
-  metadata.jarKodai = jarKodai;
-  metadata.ibanNumeriai = ibanNumeriai;
-  metadata.telefonai = telefonai;
+  let tekstoMetadata = gautiViskaIsTeksto(pages);
+  metadata = { ...metadata, ...tekstoMetadata };
+
+  // Sujungiame teksto + PDF dokumento link
+  const pdfLink = Array.from(linksMap.entries()).map(([uri, pages]) => ({
+    uri,
+    pages: Array.from(pages).sort((a, b) => a - b),
+  }));
+
+  metadata.links = Array.from(
+    (() => {
+      const map = new Map();
+
+      [...metadata.links, ...pdfLink].forEach(({ uri, pages }) => {
+        if (!map.has(uri)) map.set(uri, new Set(pages));
+        else pages.forEach((p) => map.get(uri).add(p));
+      });
+
+      return map;
+    })(),
+    ([uri, pagesSet]) => ({
+      uri,
+      pages: Array.from(pagesSet).sort((a, b) => a - b),
+    }),
+  );
+
+  // Sujungiame teksto ir mailto: email
+  let linkEmails = metadata.links
+    .filter((l) => l.uri.toLowerCase().startsWith("mailto:"))
+    .map((l) => ({
+      email: l.uri.slice(7),
+      pages: l.pages,
+    }));
+
+  metadata.emails = Array.from(
+    (() => {
+      const map = new Map();
+
+      [...linkEmails, ...metadata.emails].forEach(({ email, pages }) => {
+        if (!map.has(email)) map.set(email, new Set(pages));
+        else pages.forEach((p) => map.get(email).add(p));
+      });
+
+      return map;
+    })(),
+    ([email, pagesSet]) => ({
+      email,
+      pages: Array.from(pagesSet).sort((a, b) => a - b),
+    }),
+  );
+
+  metadata.sloppyRedactions = [...sloppyRedactionsInPages.values()];
+
   if (signatureInfo) {
     metadata.signatures = parsePdfSigOutput(signatureInfo).signatures;
   }
-  metadata.sloppyRedactions = [...sloppyRedactionsInPages.values()];
 
-  log(`4. Metadata took ${((new Date() - start) / 1000).toFixed(3)}s`);
-  start = new Date();
-
+  /// Apvalome metadata
   metadata = cleanMetadata(metadata);
 
   return {

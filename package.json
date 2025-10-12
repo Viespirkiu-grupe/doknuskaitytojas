@@ -9,12 +9,16 @@
     "license": "ISC",
     "description": "",
     "dependencies": {
+        "@kenjiuno/msgreader": "^1.27.0-alpha.3",
+        "7z-wasm": "^1.2.0",
         "adm-zip": "^0.5.16",
         "dotenv": "^17.2.2",
+        "eml-format": "^0.6.1",
         "express": "^5.1.0",
         "pdfjs-dist": "^5.4.149",
+        "tree-kill": "^1.2.2",
         "xml2js": "^0.6.2",
-        "tree-kill": "^1.2.2"
+        "yauzl": "^3.2.0"
     },
     "type": "module"
 }

@@ -6,7 +6,7 @@ import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import { parseStringPromise } from "xml2js";
-import { log } from "./utils/log.js";
+import { log } from "../utils/log.js";
 
 const TMP_DIR = path.resolve("./tmp");
 try {
@@ -16,12 +16,11 @@ try {
 }
 
 /**
- * Convert DOCX file to PDF buffer using LibreOffice with 1 min hard kill
- * Cleans up temp PDF on failure or timeout
- * @param {string} docxPath
+ * Convert PPTX file to PDF buffer using LibreOffice with 1 min hard kill
+ * @param {string} pptxPath
  */
-export async function convertDocxToPdfBuffer(docxPath) {
-  const pdfPath = path.join(TMP_DIR, path.basename(docxPath, ".docx") + ".pdf");
+export async function convertPptxToPdfBuffer(pptxPath) {
+  const pdfPath = path.join(TMP_DIR, path.basename(pptxPath, ".pptx") + ".pdf");
 
   let child;
   const promise = new Promise((resolve, reject) => {
@@ -31,7 +30,7 @@ export async function convertDocxToPdfBuffer(docxPath) {
       "pdf",
       "--outdir",
       TMP_DIR,
-      docxPath,
+      pptxPath,
     ]);
 
     child.on("error", reject);
@@ -50,12 +49,11 @@ export async function convertDocxToPdfBuffer(docxPath) {
     });
   });
 
-  // Force kill after 1 minute (kill process tree)
   const timer = setTimeout(
     () => {
       if (child && child.pid) {
         log(
-          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${docxPath}`,
+          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${pptxPath}`,
         );
         treeKill(child.pid, "SIGKILL");
       }
@@ -67,32 +65,30 @@ export async function convertDocxToPdfBuffer(docxPath) {
     return await promise;
   } finally {
     clearTimeout(timer);
-    // Best-effort cleanup
     await fs.unlink(pdfPath).catch(() => {});
   }
 }
 
 /**
- * Extract DOCX content using PDF pipeline
- * @param {string} url DOCX file URL
+ * Extract PPTX content using PDF pipeline
+ * @param {string} url PPTX file URL
  */
-export async function extractDocxContent(url) {
-  // 1. Download DOCX
+export async function extractPptxContent(url) {
+  // 1. Download PPTX
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
   const arrayBuffer = await res.arrayBuffer();
-  const docxBuffer = Buffer.from(arrayBuffer);
+  const pptxBuffer = Buffer.from(arrayBuffer);
 
-  const tmpDocx = path.join(TMP_DIR, `${randomUUID()}.docx`);
-
-  await fs.writeFile(tmpDocx, docxBuffer);
+  const tmpPptx = path.join(TMP_DIR, `${randomUUID()}.pptx`);
+  await fs.writeFile(tmpPptx, pptxBuffer);
 
   try {
-    // Convert DOCX → PDF buffer
-    const pdfBuffer = await convertDocxToPdfBuffer(tmpDocx);
+    // Convert PPTX → PDF buffer
+    const pdfBuffer = await convertPptxToPdfBuffer(tmpPptx);
 
-    // Extract DOCX metadata
-    const metadata = await extractDocxMetadata(tmpDocx);
+    // Extract PPTX metadata
+    const metadata = await extractPptxMetadata(tmpPptx);
 
     // Run PDF extractor
     let result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
@@ -101,16 +97,16 @@ export async function extractDocxContent(url) {
 
     return result;
   } finally {
-    await fs.unlink(tmpDocx); // cleanup DOCX
+    await fs.unlink(tmpPptx).catch(() => {});
   }
 }
 
 /**
- * Extract metadata from DOCX
- * @param {string} docxPath
+ * Extract metadata from PPTX
+ * @param {string} pptxPath
  */
-export async function extractDocxMetadata(docxPath) {
-  const zip = new AdmZip(await fs.readFile(docxPath));
+export async function extractPptxMetadata(pptxPath) {
+  const zip = new AdmZip(await fs.readFile(pptxPath));
   let metadata = {};
 
   // 1. Core properties
@@ -152,11 +148,11 @@ export async function extractDocxMetadata(docxPath) {
     }
   }
 
+  // Normalize metadata keys
   if (metadata.created && metadata.created._) {
     metadata.CreationDate = metadata.created._;
     delete metadata.created;
   }
-
   if (metadata.modified && metadata.modified._) {
     metadata.ModifiedDate = metadata.modified._;
     delete metadata.modified;
@@ -172,7 +168,7 @@ export async function extractDocxMetadata(docxPath) {
   delete metadata.Characters;
   metadata.wordCount = metadata.Words || 0;
   delete metadata.Words;
-  delete metadata.Pages;
+  delete metadata.Slides;
   metadata.paragraphCount = metadata.Paragraphs || 0;
   delete metadata.Paragraphs;
   if (!metadata.Author) {
