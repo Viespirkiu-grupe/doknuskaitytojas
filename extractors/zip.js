@@ -18,11 +18,11 @@ export async function extractZipContent(url) {
 
         zipfile.readEntry();
         zipfile.on("entry", (entry) => {
+          entry.filename = Buffer.from(entry.fileName).toString("utf8");
           const isDirectory = /\/$/.test(entry.fileName);
           const extension = isDirectory
             ? null
             : path.extname(entry.fileName).slice(1).toLowerCase();
-          entry.filename = Buffer.from(entry.fileName).toString("utf8");
 
           const processFile = (md5 = null) => {
             const fileMeta = {
