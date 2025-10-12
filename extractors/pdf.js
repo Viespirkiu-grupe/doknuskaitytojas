@@ -38,6 +38,8 @@ export async function extractPdfContent(input, options = {}) {
     fs.writeFileSync(tmpFile, buffer);
 
     signatureInfo = await runPdfSig(tmpFile);
+  } catch (e) {
+    // Eh....
   } finally {
     fs.unlinkSync(tmpFile);
   }
