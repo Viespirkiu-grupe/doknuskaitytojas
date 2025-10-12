@@ -18,7 +18,7 @@ export async function extractZipContent(url) {
 
         zipfile.readEntry();
         zipfile.on("entry", (entry) => {
-          entry.filename = Buffer.from(entry.fileName).toString("utf8");
+          entry.fileName = Buffer.from(entry.fileName).toString("utf8");
           const isDirectory = /\/$/.test(entry.fileName);
           const extension = isDirectory
             ? null
