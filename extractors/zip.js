@@ -1,6 +1,48 @@
 import yauzl from "yauzl";
 import crypto from "crypto";
 import path from "path";
+import iconv from "iconv-lite";
+
+const candidateEncodings = [
+  "utf8",
+  "cp1257",
+  "iso-8859-13",
+  "iso-8859-4",
+  "cp775",
+  "latin1",
+  "cp1252",
+];
+
+const lithuanianChars = "ąčęėįšųūžĄČĘĖĮŠŲŪŽ";
+const lithuanianSet = new Set(lithuanianChars.split(""));
+
+function scoreLithuanian(str) {
+  let score = 0;
+  for (const ch of str) {
+    if (lithuanianSet.has(ch))
+      score += 3; // bonus for Lithuanian letters
+    else if (/[\w ._()\-]/.test(ch)) score += 1;
+    else if (ch === "�" || ch === "�") score -= 5;
+    else if (/[\x00-\x1F\x7F]/.test(ch)) score -= 5;
+    else score -= 1;
+  }
+  return score;
+}
+
+export function decodeFilename(buf, debugLabel = "") {
+  let best = { encoding: null, text: null, score: -Infinity };
+
+  for (const enc of candidateEncodings) {
+    const text = iconv.decode(buf, enc);
+    const score = scoreLithuanian(text);
+    console.log(enc.padEnd(12), score, JSON.stringify(text));
+    if (score > best.score || (score === best.score && enc === "utf8")) {
+      best = { encoding: enc, text, score };
+    }
+  }
+
+  return best.text;
+}
 
 export async function extractZipContent(url) {
   const res = await fetch(url);
@@ -18,7 +60,7 @@ export async function extractZipContent(url) {
 
         zipfile.readEntry();
         zipfile.on("entry", (entry) => {
-          entry.fileName = Buffer.from(entry.fileName).toString("utf8");
+          entry.fileName = decodeFilename(entry.fileName);
           const isDirectory = /\/$/.test(entry.fileName);
           const extension = isDirectory
             ? null
