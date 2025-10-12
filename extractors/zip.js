@@ -89,7 +89,7 @@ export async function extractZipContent(url) {
           });
         }
 
-        resolve({ files, filesTree: root });
+        resolve({ pages: [], metadata: { files, filesTree: root } });
       });
 
       zipfile.on("error", reject);

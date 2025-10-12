@@ -73,7 +73,8 @@ export async function extract7zContent(url) {
       if (node.children) flattenTree(node.children);
     }
   }
+
   flattenTree(filesTree);
 
-  return { files, filesTree };
+  return { pages: [], metadata: { files, filesTree } };
 }
