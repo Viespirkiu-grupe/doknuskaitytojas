@@ -38,11 +38,11 @@ app.get("/healthz", (req, res) => {
 app.get("/", async (req, res) => {
   const { url, apiKey } = req.query;
 
-  log(url);
-
   if (!url) {
     return res.status(400).json({ error: "Missing url parameter" });
   }
+
+  log(url);
 
   if (apiKey !== API_KEY) {
     return res.status(403).json({ error: "Invalid API key" });
