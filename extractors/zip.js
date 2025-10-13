@@ -3,15 +3,7 @@ import crypto from "crypto";
 import path from "path";
 import iconv from "iconv-lite";
 
-const candidateEncodings = [
-  "utf8",
-  "cp1257",
-  "iso-8859-13",
-  "iso-8859-4",
-  "cp775",
-  "latin1",
-  "cp1252",
-];
+const candidateEncodings = ["utf8", "cp1257", "cp775", "latin1", "cp1252"];
 
 const lithuanianChars = "ąčęėįšųūžĄČĘĖĮŠŲŪŽ";
 const lithuanianSet = new Set(lithuanianChars.split(""));
@@ -35,7 +27,6 @@ export function decodeFilename(buf, debugLabel = "") {
   for (const enc of candidateEncodings) {
     const text = iconv.decode(buf, enc);
     const score = scoreLithuanian(text);
-    console.log(enc.padEnd(12), score, JSON.stringify(text));
     if (score > best.score || (score === best.score && enc === "utf8")) {
       best = { encoding: enc, text, score };
     }
