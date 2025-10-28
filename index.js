@@ -23,16 +23,43 @@ const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
 
 const app = express();
+app.use(express.json({ limit: "50mb" }));
 const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 process.env.LIBREOFFICE_TIMEOUT = String(process.env.LIBREOFFICE_TIMEOUT || 15);
 
-const versija = 6;
+const versija = 7;
 
 // Health check endpoint
 app.get("/healthz", (req, res) => {
   res.status(200).send("OK");
 });
+
+const extractors = {
+  pdf: extractPdfContent,
+  prn: extractPdfContent,
+  docx: extractDocxContent,
+  odt: extractDocxContent,
+  docm: extractDocxContent,
+  dotx: extractDocxContent,
+  doc: extractDocContent,
+  dot: extractDocContent,
+  rtf: extractDocContent,
+  xlsx: extractXlsxContent,
+  xlsm: extractXlsxContent,
+  xlsb: extractXlsxContent,
+  xls: extractXlsContent,
+  csv: extractXlsContent,
+  pptx: extractPptxContent,
+  ppsx: extractPptxContent,
+  ppt: extractPptContent,
+  zip: extractZipContent,
+  txt: extractTxtContent,
+  url: extractTxtContent,
+  msg: extractMsgContent,
+  eml: extractEmlContent,
+  "7z": extract7zContent,
+};
 
 // GET /?url=...&apiKey=...&extension=pdf||docx
 app.get("/", async (req, res) => {
@@ -48,33 +75,6 @@ app.get("/", async (req, res) => {
     return res.status(403).json({ error: "Invalid API key" });
   }
 
-  // Map extensions to their extraction functions
-  const extractors = {
-    pdf: extractPdfContent,
-    prn: extractPdfContent,
-    docx: extractDocxContent,
-    odt: extractDocxContent,
-    docm: extractDocxContent,
-    dotx: extractDocxContent,
-    doc: extractDocContent,
-    dot: extractDocContent,
-    rtf: extractDocContent,
-    xlsx: extractXlsxContent,
-    xlsm: extractXlsxContent,
-    xlsb: extractXlsxContent,
-    xls: extractXlsContent,
-    csv: extractXlsContent,
-    pptx: extractPptxContent,
-    ppsx: extractPptxContent,
-    ppt: extractPptContent,
-    zip: extractZipContent,
-    txt: extractTxtContent,
-    url: extractTxtContent,
-    msg: extractMsgContent,
-    eml: extractEmlContent,
-    "7z": extract7zContent,
-  };
-
   const extension = (req.query.extension || "pdf").toLowerCase();
 
   if (!extractors[extension]) {
@@ -87,6 +87,44 @@ app.get("/", async (req, res) => {
 
   try {
     const result = await extractors[extension](url);
+    res.json({ success: true, result, versija });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+    log(`Error processing ${url}:`);
+    console.error(err);
+  }
+});
+
+// POST /extract
+// Body: { url: "...", apiKey: "...", extension: "pdf" || "docx" }
+app.post("/extract", async (req, res) => {
+  const { url, apiKey, extension = "pdf", puslapiai = [] } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: "Missing url parameter" });
+  }
+
+  log(url);
+
+  if (apiKey !== API_KEY) {
+    return res.status(403).json({ error: "Invalid API key" });
+  }
+
+  const ext = extension.toLowerCase();
+
+  if (!extractors[ext]) {
+    return res.status(400).json({
+      error:
+        "Invalid extension parameter, should be one of: " +
+        Object.keys(extractors).join(", "),
+    });
+  }
+
+  try {
+    const options = {
+      puslapiai,
+    };
+    const result = await extractors[ext](url, options);
     res.json({ success: true, result, versija });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

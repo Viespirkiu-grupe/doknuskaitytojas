@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import { log } from "../utils/log.js";
 import { gautiViskaIsTeksto } from "../parsers/viskas.js";
+import { nustatytiKokybiskesniTeksta } from "../utils/nustatytiKokybiskesniTeksta.js";
 
 const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
@@ -66,8 +67,17 @@ export async function extractPdfContent(input, options = {}) {
 
     // Text
     const content = await page.getTextContent();
-    const text = content.items.map((item) => item.str).join(" ");
-    const normalizedText = text.replace(/\s+/g, " ").trim();
+    let text = content.items.map((item) => item.str).join(" ");
+
+    if (
+      options.puslapiai &&
+      options.puslapiai.length > 0 &&
+      options.puslapiai[i]
+    ) {
+      text = await nustatytiKokybiskesniTeksta(text, options.puslapiai[i - 1]);
+    }
+
+    let normalizedText = text.replace(/\s+/g, " ").trim();
     pages.push(normalizedText);
 
     // Links
