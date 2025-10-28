@@ -72,7 +72,7 @@ export async function extractPdfContent(input, options = {}) {
     if (
       options.puslapiai &&
       options.puslapiai.length > 0 &&
-      options.puslapiai[i]
+      options.puslapiai[i - 1]
     ) {
       text = await nustatytiKokybiskesniTeksta(text, options.puslapiai[i - 1]);
     }
