@@ -58,8 +58,6 @@ export async function extractImageContent(input, options = {}) {
   metadata.model = tags["Model"] ? tags["Model"].description : null;
   metadata.software = tags["Software"] ? tags["Software"].description : null;
 
-  console.log(metadata);
-
   let pages = [];
   return {
     pages,
