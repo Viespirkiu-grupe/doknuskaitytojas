@@ -91,7 +91,6 @@ export async function extractZipContent(url) {
         });
 
         zipfile.on("end", () => {
-          // Build tree with full metadata on each node
           const root = [];
 
           for (const file of files) {
@@ -103,22 +102,16 @@ export async function extractZipContent(url) {
               const isLast = i === parts.length - 1;
 
               if (!existing) {
+                // Keep the full file metadata for both files and directories
                 existing = {
-                  ...(isLast
-                    ? file
-                    : {
-                        name: part,
-                        path: parts.slice(0, i + 1).join("/"),
-                        size: 0,
-                        compressedSize: 0,
-                        extension: null,
-                        lastModDate: null,
-                        isDirectory: true,
-                        compressionMethod: null,
-                        md5: null,
-                        children: [],
-                      }),
+                  ...(!isLast
+                    ? { ...file, children: [] } // clone file metadata, initialize children for dirs
+                    : file),
                 };
+
+                // Ensure directories have children array
+                if (existing.isDirectory && !existing.children)
+                  existing.children = [];
                 currentLevel.push(existing);
               }
 

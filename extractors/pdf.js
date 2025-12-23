@@ -1,6 +1,6 @@
 import fs from "fs";
 import { execFile } from "child_process";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { getDocument, AnnotationType } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { Buffer } from "buffer";
 import { randomUUID } from "crypto";
 import path from "path";
@@ -60,7 +60,11 @@ export async function extractPdfContent(input, options = {}) {
   const pages = [];
   const linksMap = new Map(); // key: uri, value: Set of page numbers
   const emailsMap = new Map(); // key: email, value: Set of page numbers
-  const sloppyRedactionsInPages = new Set();
+  let sloppyRedactations = [];
+  let annotations = [];
+  // Make the array have the same length as number of pages
+  sloppyRedactations = new Array(pdf.numPages).fill(null);
+  annotations = new Array(pdf.numPages).fill(null);
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
@@ -97,6 +101,16 @@ export async function extractPdfContent(input, options = {}) {
         }
       }
     }
+
+    // Sloppy redactions
+    sloppyRedactations[i - 1] = await findSloppyRedactions(
+      page,
+      2,
+      content.items,
+    );
+
+    // Annotations
+    annotations[i - 1] = await getAllPageAnnotations(page);
   }
   log(`3. PDFJS took ${((new Date() - start) / 1000).toFixed(3)}s`);
 
@@ -119,6 +133,8 @@ export async function extractPdfContent(input, options = {}) {
 
   let tekstoMetadata = gautiViskaIsTeksto(pages);
   metadata = { ...metadata, ...tekstoMetadata };
+  metadata.sloppyRedactations = sloppyRedactations;
+  metadata.annotations = annotations;
 
   // Sujungiame teksto + PDF dokumento link
   const pdfLink = Array.from(linksMap.entries()).map(([uri, pages]) => ({
@@ -167,8 +183,6 @@ export async function extractPdfContent(input, options = {}) {
       pages: Array.from(pagesSet).sort((a, b) => a - b),
     }),
   );
-
-  metadata.sloppyRedactions = [...sloppyRedactionsInPages.values()];
 
   if (signatureInfo) {
     metadata.signatures = parsePdfSigOutput(signatureInfo).signatures;
@@ -286,66 +300,184 @@ function cleanMetadata(obj) {
   return obj;
 }
 
-async function searchForSloppyRedactionsInPage(
-  pdfPage,
-  tolerance,
-  textContent,
-  annotations,
-) {
-  const pageExtents = pdfPage.view;
-
+async function findSloppyRedactions(pdfPage, tolerance, textContent) {
   textContent ??= (await pdfPage.getTextContent()).items;
+  const annotations = await getAllPageAnnotations(pdfPage);
 
-  annotations ??= await pdfPage.getAnnotations();
+  // Filter only black/red opaque annotations
+  const coveredAreas = annotations.filter(
+    (annot) =>
+      !["Text", "Link", "FreeText"].includes(
+        String(annot.annotationType).toLowerCase(),
+      ) &&
+      annot.color &&
+      annot.opacity !== 0 &&
+      (annot.color.toLowerCase() === "#000000" ||
+        annot.color.toLowerCase() === "#ff0000"),
+  );
 
-  const coveredAreas = annotations.reduce((areas, annot) => {
-    // ignore TEXT | LINK | FREETEXT annotations
-    if ([1, 2, 3].includes(annot.annotationType)) {
-      return areas;
-    }
+  const findingsMap = new Map(); // key = annotation rect string
 
-    if (annot.rotation) {
-      log(`Rotated annotations not supported 🙃`);
-      return areas;
-    }
-
-    areas.push({
-      rotation: annot.rotation,
-      extentsLTRB: annot.rect,
-    });
-
-    return areas;
-  }, []);
-
-  return textContent.some((item) => {
+  for (const item of textContent) {
     const { str, width, height, transform } = item;
-    if (!str?.trim()) {
-      return false;
+    if (!str?.trim()) continue;
+
+    const L = transform[4];
+    const T = transform[5];
+    const textRect = [L, T, L + width, T + height];
+
+    for (const area of coveredAreas) {
+      const a = area.rect;
+      if (!a) continue;
+
+      const fullyCovered =
+        !(a[0] - textRect[2] > tolerance) &&
+        !(a[1] - textRect[3] > tolerance) &&
+        !(a[2] - textRect[0] < tolerance) &&
+        !(a[3] - textRect[1] < tolerance);
+
+      if (fullyCovered) {
+        const key = a.join(","); // group by annotation rect
+        if (!findingsMap.has(key)) {
+          findingsMap.set(key, {
+            text: str,
+            textRect: [...textRect],
+            annotationRect: [...a],
+            annotationType: area.annotationType,
+            color: area.color,
+            opacity: area.opacity,
+          });
+        } else {
+          findingsMap.get(key).text += " " + str;
+        }
+      }
     }
+  }
 
-    const extentL = transform[4];
-    const extentT = transform[5];
+  const findings = Array.from(findingsMap.values());
 
-    const extentsLTRB = [extentL, extentT, extentL + width, extentT + height];
+  return {
+    hasCrappyRedactions: findings.length > 0,
+    count: findings.length,
+    findings,
+  };
+}
 
-    return coveredAreas.some((area) => {
-      const testLTRB = area.extentsLTRB;
+function decodeAnnotationFlags(flags) {
+  flags = Number(flags);
+  return {
+    Invisible: Boolean(flags & 1),
+    Hidden: Boolean(flags & 2),
+    Print: Boolean(flags & 4),
+    NoZoom: Boolean(flags & 8),
+    NoRotate: Boolean(flags & 16),
+    NoView: Boolean(flags & 32),
+    ReadOnly: Boolean(flags & 64),
+    Locked: Boolean(flags & 128),
+    ToggleNoView: Boolean(flags & 256),
+    LockedContents: Boolean(flags & 512),
+  };
+}
 
-      if (testLTRB[0] - extentsLTRB[2] > tolerance) {
-        return false;
-      }
-      if (testLTRB[1] - extentsLTRB[3] > tolerance) {
-        return false;
-      }
+async function getAllPageAnnotations(pdfPage) {
+  const annotations = await pdfPage.getAnnotations();
 
-      if (testLTRB[2] - extentsLTRB[0] < tolerance) {
-        return false;
-      }
-      if (testLTRB[3] - extentsLTRB[1] < tolerance) {
-        return false;
-      }
+  const results = [];
 
-      return true;
-    });
-  });
+  for (const annot of annotations) {
+    const normalized = {
+      ...annot,
+      id: annot.id ?? null,
+      type: annot.annotationType,
+      typeName: annot.subtype ?? null,
+      rect: annot.rect ?? null,
+      rotation: annot.rotation ?? 0,
+      color: pdfColorToRGBA(annot.color).hex,
+      opacity: annot.opacity ?? null,
+      contents: annot.contents ?? null,
+      author: annot.title ?? null,
+      created: annot.creationDate ? parsePdfDate(annot.creationDate) : null,
+      modified: annot.modificationDate
+        ? parsePdfDate(annot.modificationDate)
+        : null,
+      flags: annot.annotationFlags
+        ? decodeAnnotationFlags(annot.annotationFlags)
+        : null,
+      title: annot.titleObj?.str ?? "",
+      contents: annot.contentsObj?.str ?? "",
+      annotationType: annotationTypeToString(annot.annotationType),
+      borderStyle: borderStyleToCSS(annot.borderStyle),
+    };
+
+    delete normalized.annotationFlags;
+    delete normalized.modificationDate;
+    delete normalized.creationDate;
+    delete normalized.titleObj;
+    delete normalized.contentsObj;
+    delete normalized.type;
+    // delete normalized.annotationFlags;
+
+    results.push(normalized);
+  }
+
+  return results;
+}
+
+function pdfColorToRGBA(color) {
+  if (!color || typeof color !== "object" || typeof color.length !== "number")
+    return null;
+
+  const arr = Array.from(color); // convert Uint8ClampedArray or normal array to standard array
+
+  if (arr.length === 1) {
+    const g = Math.round(arr[0] * 255);
+    return { r: g, g: g, b: g, a: 1, hex: rgbToHex(g, g, g) };
+  }
+
+  if (arr.length === 3) {
+    const [r, g, b] = arr.map((v) => Math.round(v * 255));
+    return { r, g, b, a: 1, hex: rgbToHex(r, g, b) };
+  }
+
+  if (arr.length === 4) {
+    const [c, m, y, k] = arr;
+    const r = Math.round(255 * (1 - c) * (1 - k));
+    const g = Math.round(255 * (1 - m) * (1 - k));
+    const b = Math.round(255 * (1 - y) * (1 - k));
+    return { r, g, b, a: 1, hex: rgbToHex(r, g, b) };
+  }
+
+  return null;
+}
+
+function rgbToHex(r, g, b) {
+  return "#" + [r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("");
+}
+
+function annotationTypeToString(typeNumber) {
+  for (const [key, value] of Object.entries(AnnotationType)) {
+    if (value === typeNumber) return key;
+  }
+  return "Unknown";
+}
+
+function borderStyleToCSS(borderStyle) {
+  if (!borderStyle) return null;
+
+  const width = borderStyle.width ?? 1;
+
+  const styleMap = {
+    0: "solid",
+    1: "dashed",
+    2: "solid", // beveled approximation
+    3: "inset",
+    4: "none", // underline, handle separately
+  };
+
+  const style = styleMap[borderStyle.style] ?? "solid";
+
+  return {
+    borderWidth: `${width}px`,
+    borderStyle: style,
+  };
 }

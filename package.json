@@ -14,6 +14,7 @@
         "adm-zip": "^0.5.16",
         "dotenv": "^17.2.2",
         "eml-format": "^0.6.1",
+        "exifreader": "^4.32.0",
         "express": "^5.1.0",
         "iconv-lite": "^0.7.0",
         "pdfjs-dist": "^5.4.149",

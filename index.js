@@ -16,6 +16,9 @@ import { extractTxtContent } from "./extractors/txt.js";
 import { extractMsgContent } from "./extractors/msg.js";
 import { extractEmlContent } from "./extractors/eml.js";
 import { extract7zContent } from "./extractors/7z.js";
+import { extractImageContent } from "./extractors/images.js";
+import { extractOdgContent } from "./extractors/odg.js";
+import { extractPubContent } from "./extractors/pub.js";
 
 dotenv.config({ quiet: true });
 
@@ -28,7 +31,7 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 process.env.LIBREOFFICE_TIMEOUT = String(process.env.LIBREOFFICE_TIMEOUT || 15);
 
-const versija = 7;
+const versija = 8;
 
 // Health check endpoint
 app.get("/healthz", (req, res) => {
@@ -45,6 +48,7 @@ const extractors = {
   doc: extractDocContent,
   dot: extractDocContent,
   rtf: extractDocContent,
+  pages: extractDocContent,
   xlsx: extractXlsxContent,
   xlsm: extractXlsxContent,
   xlsb: extractXlsxContent,
@@ -54,11 +58,22 @@ const extractors = {
   ppsx: extractPptxContent,
   ppt: extractPptContent,
   zip: extractZipContent,
+  adoc: extractZipContent, // Kolkas laikysime kaip zip
+  bdoc: extractZipContent, // Kolkas laikysime kaip zip
+  edoc: extractZipContent, // Kolkas laikysime kaip zip
   txt: extractTxtContent,
   url: extractTxtContent,
   msg: extractMsgContent,
   eml: extractEmlContent,
   "7z": extract7zContent,
+  jpg: extractImageContent,
+  jpeg: extractImageContent,
+  png: extractImageContent,
+  tif: extractImageContent,
+  tiff: extractImageContent,
+  jfif: extractImageContent,
+  odg: extractOdgContent,
+  pub: extractPubContent,
 };
 
 // GET /?url=...&apiKey=...&extension=pdf||docx
