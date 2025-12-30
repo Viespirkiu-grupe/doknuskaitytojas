@@ -28,7 +28,7 @@ export async function extractImageContent(input, options = {}) {
   try {
     tags = ExifReader.load(arrayBuffer);
   } catch (e) {
-    // Ignore EXIF read errors
+    throw new Error(`Failed to read EXIF data: ${e.message}`);
   }
 
   const metadata = {
