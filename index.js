@@ -19,6 +19,7 @@ import { extract7zContent } from "./extractors/7z.js";
 import { extractImageContent } from "./extractors/images.js";
 import { extractOdgContent } from "./extractors/odg.js";
 import { extractPubContent } from "./extractors/pub.js";
+import { extractRarContent } from "./extractors/rar.js";
 
 dotenv.config({ quiet: true });
 
@@ -74,6 +75,7 @@ const extractors = {
   jfif: extractImageContent,
   odg: extractOdgContent,
   pub: extractPubContent,
+  rar: extractRarContent,
 };
 
 // GET /?url=...&apiKey=...&extension=pdf||docx
