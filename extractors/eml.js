@@ -8,6 +8,10 @@ export async function extractEmlContent(url) {
 
   let eml = await res.text();
 
+  if (eml.trim() == "") {
+    throw new Error("Empty EML content");
+  }
+
   const msgInfo = await new Promise((resolve, reject) => {
     emlformat.read(eml, (error, data) => {
       if (error) return reject(error);

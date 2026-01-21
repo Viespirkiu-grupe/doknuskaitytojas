@@ -392,7 +392,7 @@ async function getAllPageAnnotations(pdfPage) {
       typeName: annot.subtype ?? null,
       rect: annot.rect ?? null,
       rotation: annot.rotation ?? 0,
-      color: pdfColorToRGBA(annot.color).hex,
+      color: annot.color ? pdfColorToRGBA(annot.color)?.hex : null,
       opacity: annot.opacity ?? null,
       contents: annot.contents ?? null,
       author: annot.title ?? null,
