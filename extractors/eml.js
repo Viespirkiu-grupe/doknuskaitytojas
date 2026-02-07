@@ -8,7 +8,7 @@ export async function extractEmlContent(url) {
 
   let eml = await res.text();
 
-  if (eml.trim() == "") {
+  if (eml.trim() === "") {
     throw new Error("Empty EML content");
   }
 
@@ -18,9 +18,17 @@ export async function extractEmlContent(url) {
       resolve(data);
     });
   });
+
+  // Strip buffers/data from attachments
+  if (msgInfo.attachments && Array.isArray(msgInfo.attachments)) {
+    for (const att of msgInfo.attachments) {
+      if ("data" in att) delete att.data;
+      if ("content" in att) delete att.content;
+    }
+  }
+
   let text = msgInfo.text || "";
-  // Replace \r\n with \n for consistency
-  text = text.replace(/\r\n/g, "\n");
+  text = text.replace(/\r\n/g, "\n"); // normalize line endings
 
   let nuskaitymui = structuredClone(msgInfo);
   delete nuskaitymui.headers;
@@ -30,10 +38,11 @@ export async function extractEmlContent(url) {
     msgInfo,
     gautiViskaIsTeksto([JSON.stringify(nuskaitymui)]),
   );
+
   metadata.pageCount = 1;
   metadata.characterCount = [text].reduce((acc, page) => acc + page.length, 0);
   metadata.wordCount = [text].reduce((acc, page) => {
-    const words = page.trim().split(/\s+/).filter(Boolean); // remove empty strings
+    const words = page.trim().split(/\s+/).filter(Boolean);
     return acc + words.length;
   }, 0);
 

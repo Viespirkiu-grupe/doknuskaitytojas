@@ -95,31 +95,38 @@ export async function extractZipContent(url) {
 
           for (const file of files) {
             const parts = file.path.split("/").filter(Boolean);
-            let currentLevel = root;
+            let level = root;
 
             parts.forEach((part, i) => {
-              let existing = currentLevel.find((f) => f.name === part);
               const isLast = i === parts.length - 1;
 
-              if (!existing) {
-                // Keep the full file metadata for both files and directories
-                existing = {
-                  ...(!isLast
-                    ? { ...file, children: [] } // clone file metadata, initialize children for dirs
-                    : file),
-                };
+              let node = level.find((n) => n.name === part);
 
-                // Ensure directories have children array
-                if (existing.isDirectory && !existing.children)
-                  existing.children = [];
-                currentLevel.push(existing);
+              if (!node) {
+                if (isLast) {
+                  node = { ...file }; // keep leaf metadata for the tree
+                } else {
+                  node = { name: part, isDirectory: true, children: [] };
+                }
+                level.push(node);
               }
 
-              currentLevel = existing.children || [];
+              level = node.children ?? [];
             });
           }
 
-          resolve({ pages: [], metadata: { files, filesTree: root } });
+          let flatFiles = files.map(({ children, ...rest }) => rest);
+
+          // Remove where from filesFlat isDirectory: true
+          flatFiles = flatFiles.filter((f) => !f.isDirectory);
+
+          resolve({
+            pages: [],
+            metadata: {
+              files: flatFiles, // completely flat now
+              filesTree: root, // tree remains the same
+            },
+          });
         });
 
         zipfile.on("error", reject);

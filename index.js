@@ -20,6 +20,7 @@ import { extractImageContent } from "./extractors/images.js";
 import { extractOdgContent } from "./extractors/odg.js";
 import { extractPubContent } from "./extractors/pub.js";
 import { extractRarContent } from "./extractors/rar.js";
+import { extractAdocContent } from "./extractors/adoc.js";
 
 dotenv.config({ quiet: true });
 
@@ -32,7 +33,7 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 process.env.LIBREOFFICE_TIMEOUT = String(process.env.LIBREOFFICE_TIMEOUT || 15);
 
-const versija = 8;
+const versija = 9;
 
 // Health check endpoint
 app.get("/healthz", (req, res) => {
@@ -59,9 +60,7 @@ const extractors = {
   ppsx: extractPptxContent,
   ppt: extractPptContent,
   zip: extractZipContent,
-  adoc: extractZipContent, // Kolkas laikysime kaip zip
-  bdoc: extractZipContent, // Kolkas laikysime kaip zip
-  edoc: extractZipContent, // Kolkas laikysime kaip zip
+  adoc: extractAdocContent,
   txt: extractTxtContent,
   url: extractTxtContent,
   msg: extractMsgContent,

@@ -1,19 +1,17 @@
 import ExifReader from "exifreader";
 import { log } from "../utils/log.js";
+import { gautiViskaIsTeksto } from "../parsers/viskas.js";
 
 export async function extractImageContent(input, options = {}) {
-  // TODO: naudoti OCR tesktą duotą
   let start = new Date();
-  //// Get the image file
   let arrayBuffer;
 
-  // Determine if input is a Buffer or URL
+  // Determine if input is a Buffer/ArrayBuffer or URL
   if (input instanceof ArrayBuffer) {
     arrayBuffer = input;
   } else if (input instanceof Uint8Array) {
     arrayBuffer = input.buffer;
   } else {
-    // Assume input is a URL
     const res = await fetch(input);
     if (!res.ok) throw new Error(`Failed to fetch ${input}: ${res.statusText}`);
     arrayBuffer = await res.arrayBuffer();
@@ -21,44 +19,47 @@ export async function extractImageContent(input, options = {}) {
 
   log(`1. Fetch image took ${((new Date() - start) / 1000).toFixed(3)}s`);
 
-  //// Extract image metadata
+  //// Extract EXIF metadata
   start = new Date();
-
   let tags = {};
   try {
     tags = ExifReader.load(arrayBuffer);
   } catch (e) {
-    throw new Error(`Failed to read EXIF data: ${e.message}`);
+    log(`Failed to read EXIF: ${e.message}`);
   }
 
-  const metadata = {
+  const exifMetadata = {
     exif: tags,
+    width: tags["Image Width"]?.value ?? tags["ImageWidth"]?.value ?? null,
+    height: tags["Image Height"]?.value ?? tags["ImageLength"]?.value ?? null,
+    createdAt: tags["DateTime"]?.description
+      ? tags["DateTime"].description.replace(/\//g, "-")
+      : null,
+    creator: tags["Make"]?.description ?? null,
+    model: tags["Model"]?.description ?? null,
+    software: tags["Software"]?.description ?? null,
   };
 
   log(`2. EXIF read took ${((new Date() - start) / 1000).toFixed(3)}s`);
 
-  metadata.width = tags["Image Width"] ? tags["Image Width"].value : null;
-  if (!metadata.width) {
-    metadata.width = tags["ImageWidth"] ? tags["ImageWidth"].value : null;
-  }
+  //// Use pre-given text if provided
+  const pages = Array.isArray(options.puslapiai) ? options.puslapiai : [];
 
-  metadata.height = tags["Image Height"] ? tags["Image Height"].value : null;
-  if (!metadata.height) {
-    metadata.height = tags["ImageLength"] ? tags["ImageLength"].value : null;
-  }
+  //// Derive text-based metadata
+  const textMetadata = gautiViskaIsTeksto(pages);
 
-  if (tags["DateTime"]?.description) {
-    const [datePart, timePart] = tags["DateTime"].description.split(" ");
-    const [yyyy, mm, dd] = datePart.split("/"); // original is yyyy/mm/dd
-    metadata.createdAt = `${yyyy}-${mm}-${dd} ${timePart}`;
-  } else {
-    metadata.createdAt = null;
-  }
-  metadata.creator = tags["Make"] ? tags["Make"].description : null;
-  metadata.model = tags["Model"] ? tags["Model"].description : null;
-  metadata.software = tags["Software"] ? tags["Software"].description : null;
+  //// Merge EXIF + text metadata
+  const metadata = {
+    ...exifMetadata,
+    ...textMetadata,
+    pageCount: pages.length,
+    characterCount: pages.reduce((acc, page) => acc + page.length, 0),
+    wordCount: pages.reduce(
+      (acc, page) => acc + page.trim().split(/\s+/).filter(Boolean).length,
+      0,
+    ),
+  };
 
-  let pages = [];
   return {
     pages,
     metadata,

@@ -66,7 +66,7 @@ export async function extract7zContent(url) {
   const filesTree = readDir();
 
   // Flatten tree
-  const files = [];
+  let files = [];
   function flattenTree(nodes) {
     for (const node of nodes) {
       files.push({ ...node, children: undefined }); // remove children in flat list
@@ -75,6 +75,9 @@ export async function extract7zContent(url) {
   }
 
   flattenTree(filesTree);
+
+  // Remove directories from flat list of files
+  files = files.filter((f) => !f.isDirectory);
 
   return { pages: [], metadata: { files, filesTree } };
 }

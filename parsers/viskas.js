@@ -3,6 +3,8 @@ import { surastiIbanNumerius } from "../parsers/ibanNumeriai.js";
 import { surastiTelefonoNumerius } from "../parsers/telefonai.js";
 import { surastiNuorodas } from "../parsers/links.js";
 import { surastiEmails } from "../parsers/emails.js";
+import { surastiIpAdresus } from "./ipAdresai.js";
+import { surastiMacAdresus } from "./macAdresai.js";
 
 export function gautiViskaIsTeksto(pages = []) {
   let result = {
@@ -11,6 +13,8 @@ export function gautiViskaIsTeksto(pages = []) {
     telefonai: surastiTelefonoNumerius(pages),
     links: surastiNuorodas(pages),
     emails: surastiEmails(pages),
+    ipAdresai: surastiIpAdresus(pages),
+    macAdresai: surastiMacAdresus(pages),
     pageCount: pages.length,
     characterCount: pages.reduce((acc, page) => acc + page.length, 0),
     wordCount: pages.reduce((acc, page) => {

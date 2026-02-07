@@ -52,13 +52,16 @@ export async function extractRarContent(url) {
   }
 
   const filesTree = readDir();
-  const files = [];
+  let files = [];
   (function flatten(nodes) {
     for (const n of nodes) {
       files.push({ ...n, children: undefined });
       if (n.children) flatten(n.children);
     }
   })(filesTree);
+
+  // Remove directories from files list, as they don't have content to extract
+  files = files.filter((f) => !f.isDirectory);
 
   return { pages: [], metadata: { files, filesTree } };
 }

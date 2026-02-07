@@ -8,7 +8,7 @@ export function deepMerge(target, source) {
       if (!target[key] || typeof target[key] !== "object") {
         target[key] = {};
       }
-      mergeDeep(target[key], source[key]);
+      deepMerge(target[key], source[key]);
     } else {
       target[key] = source[key];
     }
