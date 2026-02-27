@@ -85,7 +85,10 @@ export async function extractPdfContent(input, options = {}) {
     pages.push(normalizedText);
 
     // Links
-    const annots = await page.getAnnotations();
+    const annots = (await page.getAnnotations()).filter(
+      (annot) => annot.annotationType !== AnnotationType.FILEATTACHMENT,
+    );
+
     for (const annot of annots) {
       if (annot.subtype === "Link" && annot.url) {
         const uri = annot.url.trim();
@@ -385,6 +388,10 @@ async function getAllPageAnnotations(pdfPage) {
   const results = [];
 
   for (const annot of annotations) {
+    if (annot.annotationType === AnnotationType.FILEATTACHMENT && annot.file) {
+      delete annot.file.content;
+    }
+
     const normalized = {
       ...annot,
       id: annot.id ?? null,
@@ -415,7 +422,6 @@ async function getAllPageAnnotations(pdfPage) {
     delete normalized.titleObj;
     delete normalized.contentsObj;
     delete normalized.type;
-    // delete normalized.annotationFlags;
 
     results.push(normalized);
   }
