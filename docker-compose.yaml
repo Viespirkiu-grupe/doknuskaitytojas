@@ -5,6 +5,11 @@ services:
     restart: unless-stopped
     ports:
       - "2004:2004"
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
 
   viesdoknuskaitytojas:
     build: .
@@ -19,3 +24,8 @@ services:
       - "${PORT:-3000}:${PORT:-3000}"
     depends_on:
       - unoserver
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "10m"
