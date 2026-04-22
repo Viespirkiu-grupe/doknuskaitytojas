@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "node --env-file=.env --test test/*.test.js test/**/*.test.js"
     },
     "author": "",
     "license": "ISC",
@@ -12,13 +12,16 @@
         "@kenjiuno/msgreader": "^1.27.0-alpha.3",
         "7z-wasm": "^1.2.0",
         "adm-zip": "^0.5.16",
+        "cfb": "^1.2.2",
         "dotenv": "^17.2.2",
         "eml-format": "^0.6.1",
         "exifreader": "^4.32.0",
         "express": "^5.1.0",
         "fast-xml-parser": "^5.3.3",
         "iconv-lite": "^0.7.1",
+        "linkedom": "^0.18.12",
         "pdfjs-dist": "^5.4.149",
+        "rtf.js": "^3.0.9",
         "tree-kill": "^1.2.2",
         "xml2js": "^0.6.2",
         "yauzl": "^3.2.0"

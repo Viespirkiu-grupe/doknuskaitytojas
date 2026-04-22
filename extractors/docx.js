@@ -1,12 +1,11 @@
 import fs from "fs/promises";
 import path from "path";
-import { spawn } from "child_process";
-import treeKill from "tree-kill";
 import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import AdmZip from "adm-zip";
 import { parseStringPromise } from "xml2js";
 import { log } from "../utils/log.js";
+import { convertToPdf } from "../utils/libreoffice.js";
 
 const TMP_DIR = path.resolve("./tmp");
 try {
@@ -21,53 +20,11 @@ try {
  * @param {string} docxPath
  */
 export async function convertDocxToPdfBuffer(docxPath) {
-  const pdfPath = path.join(TMP_DIR, path.basename(docxPath, ".docx") + ".pdf");
-
-  let child;
-  const promise = new Promise((resolve, reject) => {
-    child = spawn("libreoffice", [
-      "--headless",
-      "--convert-to",
-      "pdf",
-      "--outdir",
-      TMP_DIR,
-      docxPath,
-    ]);
-
-    child.on("error", reject);
-
-    child.on("exit", async (code) => {
-      try {
-        if (code !== 0) {
-          return reject(new Error(`LibreOffice exited with code ${code}`));
-        }
-        const buffer = await fs.readFile(pdfPath);
-        await fs.unlink(pdfPath).catch(() => {});
-        resolve(buffer);
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
-
-  // Force kill after 1 minute (kill process tree)
-  const timer = setTimeout(
-    () => {
-      if (child && child.pid) {
-        log(
-          `Killing LibreOffice process (pid: ${child.pid}) due to timeout for file: ${docxPath}`,
-        );
-        treeKill(child.pid, "SIGKILL");
-      }
-    },
-    parseInt(process.env.LIBREOFFICE_TIMEOUT ?? "15", 10) * 1000,
-  );
-
+  const pdfPath = path.join(TMP_DIR, `${randomUUID()}.pdf`);
   try {
-    return await promise;
+    await convertToPdf(docxPath, pdfPath);
+    return await fs.readFile(pdfPath);
   } finally {
-    clearTimeout(timer);
-    // Best-effort cleanup
     await fs.unlink(pdfPath).catch(() => {});
   }
 }
@@ -185,3 +142,12 @@ export async function extractDocxMetadata(docxPath) {
 function stripPrefix(key) {
   return key.includes(":") ? key.split(":").pop() : key;
 }
+
+export const fileTypes = [
+  { ext: "docx", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+  { ext: "docm", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", normalizedAs: "docx" },
+  { ext: "dotx", mime: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", normalizedAs: "docx" },
+  { ext: "odt",  mime: "application/vnd.oasis.opendocument.text", normalizedAs: "docx" },
+];
+
+export { extractDocxContent as extract };

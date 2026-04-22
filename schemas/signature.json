@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "signature.json",
+  "description": "A single digital signature extracted from a PDF via pdfsig (poppler-utils). Personal identity numbers are never stored; the raw Distinguished Name is dropped.",
+  "allOf": [{ "$ref": "signature.base.json" }],
+  "type": "object",
+  "required": ["number", "fieldName", "type", "signedRanges", "totalDocumentSigned", "validation", "isValid"],
+  "additionalProperties": false,
+  "properties": {
+    "signerCN":        { "$ref": "signature.base.json#/properties/signerCN" },
+    "signerEmail":     { "$ref": "signature.base.json#/properties/signerEmail" },
+    "signerCountry":   { "$ref": "signature.base.json#/properties/signerCountry" },
+    "hasPersonalId":   { "$ref": "signature.base.json#/properties/hasPersonalId" },
+    "signingTime":     { "$ref": "signature.base.json#/properties/signingTime" },
+    "hashAlgorithm":   { "$ref": "signature.base.json#/properties/hashAlgorithm" },
+    "isValid":         { "$ref": "signature.base.json#/properties/isValid" },
+
+    "number": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "1-based index of this signature in the document"
+    },
+    "fieldName": {
+      "type": "string",
+      "description": "PDF form field name that contains the signature"
+    },
+    "type": {
+      "type": "string",
+      "description": "Signature subtype reported by pdfsig (e.g. ETSI.CAdES.detached, adbe.pkcs7.detached, ETSI.RFC3161)"
+    },
+    "signedRanges": {
+      "type": "array",
+      "description": "Byte ranges of the document body covered by this signature",
+      "items": {
+        "type": "array",
+        "description": "[start, end] byte offsets (inclusive)",
+        "items": { "type": "integer", "minimum": 0 },
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "totalDocumentSigned": {
+      "type": "boolean",
+      "description": "True if the signature covers the entire document byte range"
+    },
+    "validation": {
+      "type": ["string", "null"],
+      "description": "Raw validation status message from pdfsig"
+    }
+  }
+}

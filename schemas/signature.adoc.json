@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "signature.adoc.json",
+  "description": "A single XAdES electronic signature extracted from an ADOC package, combining data from the XAdES signature XML file and the corresponding signable metadata entry.",
+  "allOf": [{ "$ref": "signature.base.json" }],
+  "type": "object",
+  "required": ["filePath", "level", "signingPurpose", "signer", "contentRefsCount"],
+  "additionalProperties": false,
+  "properties": {
+    "signerCN":        { "$ref": "signature.base.json#/properties/signerCN" },
+    "signerEmail":     { "$ref": "signature.base.json#/properties/signerEmail" },
+    "signerCountry":   { "$ref": "signature.base.json#/properties/signerCountry" },
+    "hasPersonalId":   { "$ref": "signature.base.json#/properties/hasPersonalId" },
+    "signingTime":     { "$ref": "signature.base.json#/properties/signingTime" },
+    "hashAlgorithm":   { "$ref": "signature.base.json#/properties/hashAlgorithm" },
+    "isValid":         { "$ref": "signature.base.json#/properties/isValid" },
+
+    "filePath": {
+      "type": "string",
+      "description": "Path to the XAdES signature XML file within the ZIP (e.g. META-INF/signatures/signatures0.xml)"
+    },
+    "level": {
+      "type": ["string", "null"],
+      "enum": ["XAdES-EPES", "XAdES-T", "XAdES-C", "XAdES-X", "XAdES-X-L", "XAdES-A", null],
+      "description": "XAdES conformance level inferred from which UnsignedSignatureProperties elements are present; null if the XAdES file could not be parsed"
+    },
+    "signingPurpose": {
+      "type": ["string", "null"],
+      "enum": [
+        "signature",
+        "confirmation",
+        "visa",
+        "conciliation",
+        "acknowledgement",
+        "registration",
+        "registration-of-incomming-documents",
+        "notarisation",
+        "copy-certification",
+        null
+      ],
+      "description": "Purpose declared in the signable metadata signingPurpose element"
+    },
+    "signer": {
+      "description": "Identity of the signer as declared in the signable metadata (name and position), distinct from the certificate subject which may contain a personal ID number.",
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["name", "position", "unit"],
+          "additionalProperties": false,
+          "properties": {
+            "name":     { "type": ["string", "null"], "description": "Full name (individualName)" },
+            "position": { "type": ["string", "null"], "description": "Job title (positionName)" },
+            "unit":     { "type": ["string", "null"], "description": "Structural subdivision" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "contentRefsCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of ds:Reference elements in SignedInfo that point to files (excludes the internal #fragment reference to SignedProperties)"
+    }
+  }
+}

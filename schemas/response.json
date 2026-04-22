@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "response.json",
+  "type": "object",
+  "required": ["success", "version"],
+  "properties": {
+    "success": { "type": "boolean" },
+    "version": { "type": "integer" },
+    "result": {
+      "type": "object",
+      "required": ["pages", "metadata", "mimeType", "extension"],
+      "properties": {
+        "pages": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "metadata": { "$ref": "metadata.json" },
+        "mimeType": {
+          "type": "string",
+          "description": "MIME type of the source file"
+        },
+        "extension": {
+          "type": "string",
+          "description": "Normalised file extension (e.g. jpeg → jpg, odt → docx)"
+        },
+        "companyIds":     { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/companyIds" },
+        "ibans":          { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/ibans" },
+        "phones":         { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/phones" },
+        "links":          { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/links" },
+        "emails":         { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/emails" },
+        "ipAddresses":    { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/ipAddresses" },
+        "macAddresses":   { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/macAddresses" },
+        "domains":        { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/domains" },
+        "pageCount":      { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/pageCount" },
+        "characterCount": { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/characterCount" },
+        "wordCount":      { "$ref": "metadata.parsed.json#/$defs/parsedFields/properties/wordCount" }
+      }
+    },
+    "error": { "type": "string" }
+  }
+}

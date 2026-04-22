@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.image.json",
+  "type": "object",
+  "required": ["format", "width", "height", "bitDepth", "camera", "dates", "location", "resolution", "icc", "iptc"],
+  "properties": {
+    "format": {
+      "type": ["string", "null"],
+      "description": "Image format as reported by ExifReader (JPEG, PNG, TIFF, GIF, WebP, HEIC, …) or BMP from manual parsing"
+    },
+    "width":    { "type": ["integer", "null"], "description": "Image width in pixels" },
+    "height":   { "type": ["integer", "null"], "description": "Image height in pixels" },
+    "bitDepth": { "type": ["integer", "null"], "description": "Bits per sample/channel" },
+    "orientation": {
+      "type": ["integer", "null"],
+      "description": "EXIF orientation value (1–8); absent for formats without EXIF"
+    },
+    "software": {
+      "type": ["string", "null"],
+      "description": "Software tag from EXIF (camera firmware, editing app, etc.)"
+    },
+    "colorSpace": {
+      "type": ["string", "null"],
+      "description": "EXIF ColorSpace description (e.g. 'sRGB', 'Uncalibrated')"
+    },
+    "colorType": {
+      "type": "string",
+      "description": "PNG color type (e.g. 'RGB', 'RGB with Alpha', 'Grayscale'); present only for PNG"
+    },
+    "interlaced": {
+      "type": "boolean",
+      "description": "Whether the PNG uses Adam7 interlacing; present only for PNG"
+    },
+    "gifVersion": {
+      "type": "string",
+      "description": "GIF version string (e.g. 'GIF89a'); present only for GIF"
+    },
+    "camera": {
+      "description": "Camera and capture settings from EXIF; null when no camera metadata is present",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "properties": {
+            "make":             { "type": ["string", "null"], "description": "Camera manufacturer" },
+            "model":            { "type": ["string", "null"], "description": "Camera model" },
+            "exposureTime":     { "type": ["string", "null"], "description": "Exposure time (e.g. '1/500')" },
+            "fNumber":          { "type": ["number", "null"], "description": "Aperture f-number" },
+            "iso":              { "type": ["integer", "null"], "description": "ISO speed rating" },
+            "focalLength":      { "type": ["number", "null"], "description": "Focal length in mm" },
+            "focalLength35mm":  { "type": ["integer", "null"], "description": "35mm equivalent focal length" },
+            "flash":            { "type": ["string", "null"], "description": "Flash mode description" },
+            "whiteBalance":     { "type": ["string", "null"] },
+            "exposureMode":     { "type": ["string", "null"] },
+            "exposureProgram":  { "type": ["string", "null"] },
+            "meteringMode":     { "type": ["string", "null"] },
+            "sceneCaptureType": { "type": ["string", "null"] }
+          }
+        }
+      ]
+    },
+    "dates": {
+      "description": "Timestamps from EXIF; null when no date metadata is present",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "properties": {
+            "captured":  { "type": ["string", "null"], "format": "date-time", "description": "DateTimeOriginal — when the shutter fired" },
+            "digitized": { "type": ["string", "null"], "format": "date-time", "description": "DateTimeDigitized — when the image was stored digitally" },
+            "modified":  { "type": ["string", "null"], "format": "date-time", "description": "DateTime — last modification time" }
+          }
+        }
+      ]
+    },
+    "location": {
+      "description": "GPS coordinates; null when no GPS data is present",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["latitude", "longitude"],
+          "properties": {
+            "latitude":  { "type": "number", "description": "Decimal degrees (WGS 84), positive = North" },
+            "longitude": { "type": "number", "description": "Decimal degrees (WGS 84), positive = East" },
+            "altitude":  { "type": ["number", "null"], "description": "Metres above sea level" }
+          }
+        }
+      ]
+    },
+    "resolution": {
+      "description": "Print/display resolution; null when not specified",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["x", "y", "unit"],
+          "properties": {
+            "x":    { "type": ["number", "null"], "description": "Horizontal resolution" },
+            "y":    { "type": ["number", "null"], "description": "Vertical resolution" },
+            "unit": { "type": ["string", "null"], "description": "Resolution unit (e.g. 'inches', 'centimetres', 'meters')" }
+          }
+        }
+      ]
+    },
+    "icc": {
+      "description": "ICC colour profile; null when not embedded",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "properties": {
+            "description": { "type": ["string", "null"] },
+            "copyright":   { "type": ["string", "null"] },
+            "colorSpace":  { "type": ["string", "null"] }
+          }
+        }
+      ]
+    },
+    "iptc": {
+      "description": "IPTC press/editorial metadata; null when not present",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "properties": {
+            "headline":  { "type": ["string", "null"] },
+            "caption":   { "type": ["string", "null"] },
+            "credit":    { "type": ["string", "null"] },
+            "byline":    { "type": ["string", "null"] },
+            "copyright": { "type": ["string", "null"] },
+            "keywords":  { "type": "array", "items": { "type": "string" } },
+            "city":      { "type": ["string", "null"] },
+            "country":   { "type": ["string", "null"] }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    { "$ref": "metadata.parsed.json#/$defs/parsedFields" }
+  ]
+}

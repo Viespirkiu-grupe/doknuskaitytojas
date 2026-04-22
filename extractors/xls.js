@@ -1,53 +1,18 @@
 import fs from "fs/promises";
 import path from "path";
-import { spawn } from "child_process";
-import treeKill from "tree-kill";
 import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
+import { convertToPdf } from "../utils/libreoffice.js";
 
 const TMP_DIR = path.resolve("./tmp");
 await fs.mkdir(TMP_DIR, { recursive: true });
 
 export async function convertXlsToPdfBuffer(xlsPath) {
-  const pdfPath = path.join(TMP_DIR, path.basename(xlsPath, ".xls") + ".pdf");
-
-  let child;
-  const promise = new Promise((resolve, reject) => {
-    child = spawn("libreoffice", [
-      "--headless",
-      "--convert-to",
-      "pdf",
-      "--outdir",
-      TMP_DIR,
-      xlsPath,
-    ]);
-
-    child.on("error", reject);
-
-    child.on("exit", async (code) => {
-      try {
-        if (code !== 0)
-          return reject(new Error(`LibreOffice exited with code ${code}`));
-        const buffer = await fs.readFile(pdfPath);
-        await fs.unlink(pdfPath).catch(() => {});
-        resolve(buffer);
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
-
-  const timer = setTimeout(
-    () => {
-      if (child?.pid) treeKill(child.pid, "SIGKILL");
-    },
-    parseInt(process.env.LIBREOFFICE_TIMEOUT ?? "15", 10) * 1000,
-  );
-
+  const pdfPath = path.join(TMP_DIR, `${randomUUID()}.pdf`);
   try {
-    return await promise;
+    await convertToPdf(xlsPath, pdfPath);
+    return await fs.readFile(pdfPath);
   } finally {
-    clearTimeout(timer);
     await fs.unlink(pdfPath).catch(() => {});
   }
 }
@@ -74,3 +39,10 @@ export async function extractXlsContent(url) {
     await fs.unlink(tmpXls).catch(() => {});
   }
 }
+
+export const fileTypes = [
+  { ext: "xls", mime: "application/vnd.ms-excel" },
+  { ext: "csv", mime: "text/csv" },
+];
+
+export { extractXlsContent as extract };

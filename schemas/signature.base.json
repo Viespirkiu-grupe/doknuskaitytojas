@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "signature.base.json",
+  "description": "Fields common to all digital signature types (PDF CAdES/PKCS#7 and ADOC XAdES).",
+  "type": "object",
+  "required": ["signerCN", "signerEmail", "signerCountry", "hasPersonalId", "signingTime", "hashAlgorithm", "isValid"],
+  "properties": {
+    "signerCN": {
+      "type": ["string", "null"],
+      "description": "Common Name from the signer's certificate subject (typically the signer's full name), or null if the certificate was not embedded or the CN field was absent"
+    },
+    "signerEmail": {
+      "type": ["string", "null"],
+      "format": "email",
+      "description": "Email address from the certificate subject (E= / emailAddress=) or Subject Alternative Name, or null if absent"
+    },
+    "signerCountry": {
+      "type": ["string", "null"],
+      "description": "ISO 3166-1 alpha-2 country code from the C= field of the signer's certificate, or null if absent"
+    },
+    "hasPersonalId": {
+      "type": "boolean",
+      "description": "True if the certificate serialNumber field contains a Lithuanian personal identity number (11-digit asmens kodas or PNOLT- passport number). The number itself is never stored."
+    },
+    "signingTime": {
+      "type": ["string", "null"],
+      "description": "Claimed signing timestamp as ISO 8601, or null if absent. Source varies by format: XAdES SigningTime element for ADOC, pdfsig output for PDF."
+    },
+    "hashAlgorithm": {
+      "type": ["string", "null"],
+      "description": "Human-readable hash algorithm name (e.g. 'SHA-256', 'SHA-512'), or null if unknown"
+    },
+    "isValid": {
+      "type": ["boolean", "null"],
+      "description": "true = signature is cryptographically valid, false = invalid, null = not validated at extraction time"
+    }
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.adoc.json",
+  "description": "Metadata extracted from an ADOC-V1.0 electronically signed document container.",
+  "$defs": {
+    "person": {
+      "description": "A party (author, recipient, or receiver) as declared in signable metadata.",
+      "type": "object",
+      "required": ["name", "code", "address", "individual"],
+      "additionalProperties": false,
+      "properties": {
+        "name":       { "type": ["string", "null"], "description": "Full name or organisation name" },
+        "code":       { "type": ["string", "null"], "description": "Company registration code or personal code (optional for natural persons)" },
+        "address":    { "type": ["string", "null"] },
+        "individual": { "type": ["boolean", "null"], "description": "true = natural person, false = legal entity" }
+      }
+    },
+    "officer": {
+      "description": "A named employee with optional position and unit, used for signers and registrars.",
+      "type": ["object", "null"],
+      "required": ["name", "position", "unit"],
+      "additionalProperties": false,
+      "properties": {
+        "name":     { "type": ["string", "null"], "description": "Full name (individualName)" },
+        "position": { "type": ["string", "null"], "description": "Job title (positionName)" },
+        "unit":     { "type": ["string", "null"], "description": "Structural subdivision" }
+      }
+    },
+    "contentRef": {
+      "description": "A reference to a content file within the package, with its declared MIME type.",
+      "type": "object",
+      "required": ["path", "mediaType"],
+      "additionalProperties": false,
+      "properties": {
+        "path":      { "type": "string",          "description": "Path relative to the ZIP root" },
+        "mediaType": { "type": ["string", "null"], "description": "MIME type from manifest.xml" }
+      }
+    },
+    "registration": {
+      "type": "object",
+      "required": ["date", "number"],
+      "additionalProperties": false,
+      "properties": {
+        "date":   { "type": ["string", "null"], "description": "Registration date (xsd:date or xsd:dateTime with timezone)" },
+        "number": { "type": ["string", "null"], "description": "Registration number" }
+      }
+    },
+    "reception": {
+      "type": "object",
+      "required": ["date", "number", "receiver"],
+      "additionalProperties": false,
+      "properties": {
+        "date":     { "type": ["string", "null"], "description": "Received date (xsd:date or xsd:dateTime with timezone)" },
+        "number":   { "type": ["string", "null"], "description": "Received document registration number" },
+        "receiver": {
+          "oneOf": [
+            { "$ref": "#/$defs/person" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "adocSignature": { "$ref": "signature.adoc.json" }
+  },
+
+  "type": "object",
+  "required": [
+    "containerType",
+    "standardVersion",
+    "documentCategory",
+    "title",
+    "documentType",
+    "authors",
+    "registrations",
+    "receptions",
+    "mainDocument",
+    "annexes",
+    "attachments",
+    "signatures",
+    "files",
+    "filesTree"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "containerType": {
+      "const": "ADOC",
+      "description": "Always 'ADOC' — used to discriminate this schema from other metadata types"
+    },
+    "standardVersion": {
+      "type": ["string", "null"],
+      "description": "Specification version from unsignable metadata (standardVersion element), e.g. 'ADOC-V1.0'"
+    },
+    "documentCategory": {
+      "type": ["string", "null"],
+      "enum": ["GeDOC", "GGeDOC", "BeDOC", "CeDOC", null],
+      "description": "Document group from unsignable metadata: GeDOC = government-issued, GGeDOC = received by government, BeDOC = private legal entity, CeDOC = natural person"
+    },
+    "title": {
+      "type": ["string", "null"],
+      "description": "Document title from the signable metadata document/title element"
+    },
+    "documentType": {
+      "type": ["string", "null"],
+      "description": "Document type (sort element) e.g. 'įsakymas', 'sutartis', 'raštas'"
+    },
+    "authors": {
+      "type": "array",
+      "description": "Parties that prepared the document (authors/author elements in signable metadata)",
+      "items": { "$ref": "#/$defs/person" }
+    },
+    "registrations": {
+      "type": "array",
+      "description": "Outgoing registration records (registrations/registration in signable metadata)",
+      "items": { "$ref": "#/$defs/registration" }
+    },
+    "receptions": {
+      "type": "array",
+      "description": "Incoming registration records — recorded when the document was received and logged by the recipient (receptions/reception in signable metadata)",
+      "items": { "$ref": "#/$defs/reception" }
+    },
+    "mainDocument": {
+      "oneOf": [
+        { "$ref": "#/$defs/contentRef" },
+        { "type": "null" }
+      ],
+      "description": "The single main content file, identified via the 'content/main' relationship type in relations.xml"
+    },
+    "annexes": {
+      "type": "array",
+      "description": "Annex files attached to the main document or to other annexes ('content/appendix' relationships), forming a tree up to 3 levels deep",
+      "items": { "$ref": "#/$defs/contentRef" }
+    },
+    "attachments": {
+      "type": "array",
+      "description": "Independent electronic documents attached to the main document ('content/attachment' relationships); each is a separate .adoc or compatible e-document",
+      "items": { "$ref": "#/$defs/contentRef" }
+    },
+    "signatures": {
+      "type": "array",
+      "description": "All electronic signatures found in the package, each merged from the XAdES signature file and its corresponding entry in the signable metadata",
+      "items": { "$ref": "#/$defs/adocSignature" }
+    },
+    "files": {
+      "type": "array",
+      "description": "Flat list of all files in the ZIP (includes META-INF and metadata files; excludes the 'mimetype' entry)",
+      "items": { "$ref": "metadata.archive.json#/$defs/archiveFile" }
+    },
+    "filesTree": {
+      "type": "array",
+      "description": "Directory tree of the same files",
+      "items": { "$ref": "metadata.archive.json#/$defs/archiveFile" }
+    }
+  }
+}

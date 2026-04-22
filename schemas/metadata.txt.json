@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.txt.json",
+  "type": "object",
+  "required": ["encoding", "text"],
+  "properties": {
+    "encoding": {
+      "type": "string",
+      "description": "Detected character encoding (e.g. utf8, cp1257, cp775, latin1, cp1252)"
+    }
+  },
+  "allOf": [
+    { "$ref": "metadata.parsed.json#/$defs/parsedFields" }
+  ]
+}

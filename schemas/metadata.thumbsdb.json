@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.thumbsdb.json",
+  "type": "object",
+  "required": ["files"],
+  "additionalProperties": false,
+  "properties": {
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["hash", "thumbnailSize", "width", "height", "jpegSize", "lastModDate"],
+        "additionalProperties": false,
+        "properties": {
+          "hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{16}$",
+            "description": "64-bit FNV hash of the original file path (uppercase), as hex"
+          },
+          "thumbnailSize": {
+            "type": "integer",
+            "description": "Max dimension of the cached thumbnail in pixels (e.g. 256)"
+          },
+          "width": {
+            "type": ["integer", "null"],
+            "description": "Actual JPEG width in pixels"
+          },
+          "height": {
+            "type": ["integer", "null"],
+            "description": "Actual JPEG height in pixels"
+          },
+          "jpegSize": {
+            "type": "integer",
+            "description": "Size of the JPEG thumbnail data in bytes"
+          },
+          "lastModDate": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Modification time of the original file, from the 4-byte Unix timestamp in the stream header"
+          }
+        }
+      }
+    }
+  }
+}

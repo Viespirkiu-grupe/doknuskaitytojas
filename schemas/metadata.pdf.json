@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.pdf.json",
+  "description": "Metadata extracted from a native PDF document.",
+  "allOf": [{ "$ref": "metadata.parsed.json#/$defs/parsedFields" }],
+  "properties": {
+    "pdfVersion": {
+      "type": ["string", "null"],
+      "description": "PDF format version string (e.g. '1.7', '2.0')"
+    },
+    "language": {
+      "type": ["string", "null"],
+      "description": "BCP 47 language tag declared in the PDF catalogue (e.g. 'lt', 'en-US')"
+    },
+    "encryptFilter": {
+      "type": ["string", "null"],
+      "description": "Name of the encryption filter if the document is encrypted, otherwise null"
+    },
+    "isLinearized": {
+      "type": "boolean",
+      "description": "True if the PDF is linearized (optimized for fast web viewing)"
+    },
+    "isAcroFormPresent": {
+      "type": "boolean",
+      "description": "True if the document contains an AcroForm (interactive form fields)"
+    },
+    "isXfaPresent": {
+      "type": "boolean",
+      "description": "True if the document contains an XFA form"
+    },
+    "isCollectionPresent": {
+      "type": "boolean",
+      "description": "True if the document is a PDF Portfolio / Collection"
+    },
+    "isSignaturesPresent": {
+      "type": "boolean",
+      "description": "True if the document declares at least one signature field"
+    },
+    "title": {
+      "type": ["string", "null"],
+      "description": "Document title from the PDF info dictionary"
+    },
+    "author": {
+      "type": ["string", "null"],
+      "description": "Author field from the PDF info dictionary"
+    },
+    "subject": {
+      "type": ["string", "null"],
+      "description": "Subject field from the PDF info dictionary"
+    },
+    "keywords": {
+      "type": ["string", "null"],
+      "description": "Keywords field from the PDF info dictionary"
+    },
+    "creator": {
+      "type": ["string", "null"],
+      "description": "Application that originally created the document (e.g. 'Microsoft® Word 2016')"
+    },
+    "producer": {
+      "type": ["string", "null"],
+      "description": "Application that produced or last modified the PDF file"
+    },
+    "createdAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Document creation timestamp as ISO 8601"
+    },
+    "modifiedAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Last modification timestamp as ISO 8601"
+    },
+    "trapped": {
+      "type": ["string", "boolean", "null"],
+      "description": "PDF Trapped entry (True / False / Unknown)"
+    },
+    "sloppyRedactions": {
+      "type": "array",
+      "description": "Text items that are visually covered by an opaque black or red annotation but remain in the content stream",
+      "items": {
+        "type": "object",
+        "required": ["page", "text", "annotationRect", "annotationType", "color"],
+        "properties": {
+          "page":           { "type": "integer", "minimum": 1 },
+          "text":           { "type": "string" },
+          "annotationRect": { "type": "array", "items": { "type": "number" }, "minItems": 4, "maxItems": 4 },
+          "annotationType": { "type": "string" },
+          "color":          { "type": "string", "pattern": "^#[0-9a-f]{6}$" }
+        }
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "items": { "$ref": "signature.json" }
+    }
+  }
+}

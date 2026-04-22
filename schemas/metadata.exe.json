@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.exe.json",
+  "type": "object",
+  "required": ["arch", "type", "compiledAt", "subsystem", "sections", "imports", "signed", "security", "version"],
+  "properties": {
+    "arch": {
+      "type": ["string", "null"],
+      "description": "Target CPU architecture (e.g. 'x86', 'x64', 'ARM64')"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["exe", "dll", "sys"],
+      "description": "File type derived from COFF characteristics"
+    },
+    "compiledAt": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "Linker timestamp from COFF header (ISO 8601); can be spoofed"
+    },
+    "subsystem": {
+      "type": ["string", "null"],
+      "description": "Windows subsystem (e.g. 'Windows GUI', 'Windows Console', 'Native')"
+    },
+    "sections": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Section names in order (e.g. '.text', '.data', '.rsrc')"
+    },
+    "imports": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "DLL names listed in the import directory"
+    },
+    "signed": {
+      "type": "boolean",
+      "description": "Whether an Authenticode signature block is present in the security data directory"
+    },
+    "security": {
+      "type": "object",
+      "required": ["aslr", "highEntropyAslr", "dep", "noSeh", "cfg", "terminalServerAware"],
+      "properties": {
+        "aslr":                { "type": "boolean", "description": "DYNAMIC_BASE — image can be rebased at load time (ASLR)" },
+        "highEntropyAslr":     { "type": "boolean", "description": "HIGH_ENTROPY_VA — 64-bit ASLR address space" },
+        "dep":                 { "type": "boolean", "description": "NX_COMPAT — compatible with Data Execution Prevention" },
+        "noSeh":               { "type": "boolean", "description": "NO_SEH — no structured exception handling" },
+        "cfg":                 { "type": "boolean", "description": "GUARD_CF — Control Flow Guard enabled" },
+        "terminalServerAware": { "type": "boolean", "description": "TERMINAL_SERVER_AWARE — safe for Remote Desktop" }
+      }
+    },
+    "version": {
+      "description": "Version info strings from the RT_VERSION resource; null when absent",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "properties": {
+            "fileVersion":          { "type": ["string", "null"], "description": "Numeric file version from VS_FIXEDFILEINFO (e.g. '11.0.17134.1')" },
+            "productVersion":       { "type": ["string", "null"], "description": "Numeric product version from VS_FIXEDFILEINFO" },
+            "companyName":          { "type": ["string", "null"] },
+            "productName":          { "type": ["string", "null"] },
+            "fileDescription":      { "type": ["string", "null"] },
+            "fileVersionString":    { "type": ["string", "null"], "description": "Human-readable FileVersion string (may include build label)" },
+            "productVersionString": { "type": ["string", "null"] },
+            "legalCopyright":       { "type": ["string", "null"] },
+            "originalFilename":     { "type": ["string", "null"] },
+            "internalName":         { "type": ["string", "null"] }
+          }
+        }
+      ]
+    }
+  },
+  "allOf": [
+    { "$ref": "metadata.parsed.json#/$defs/parsedFields" }
+  ]
+}

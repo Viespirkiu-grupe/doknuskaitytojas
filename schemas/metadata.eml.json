@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.eml.json",
+  "description": "Metadata for EML (RFC 822) email files. Extends the shared email base.",
+  "allOf": [
+    { "$ref": "metadata.email.json" },
+    {
+      "type": "object",
+      "required": ["date", "to"],
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Sent date from the Date header"
+        },
+        "to": {
+          "description": "Recipient(s); single address or array when multiple To headers are present",
+          "oneOf": [
+            { "$ref": "metadata.parsed.json#/$defs/emailAddress" },
+            { "type": "array", "items": { "$ref": "metadata.parsed.json#/$defs/emailAddress" } }
+          ]
+        },
+        "attachments": {
+          "type": "array",
+          "description": "Overrides base: adds the inline flag specific to EML Content-Disposition",
+          "items": {
+            "type": "object",
+            "required": ["name", "contentType"],
+            "properties": {
+              "name":        { "type": "string", "description": "Decoded attachment filename" },
+              "contentType": { "type": "string", "description": "MIME content type" },
+              "inline":      { "type": "boolean", "description": "True if Content-Disposition is inline" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

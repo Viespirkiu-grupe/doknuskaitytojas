@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.msg.json",
+  "description": "Metadata for MSG (Outlook) email files. Extends the shared email base.",
+  "allOf": [
+    { "$ref": "metadata.email.json" },
+    {
+      "type": "object",
+      "required": ["to"],
+      "properties": {
+        "to": {
+          "type": "array",
+          "description": "All recipients (To, CC, BCC combined as returned by msgreader)",
+          "items": { "$ref": "metadata.parsed.json#/$defs/emailAddress" }
+        },
+        "attachments": {
+          "type": "array",
+          "description": "Overrides base: adds the size field available from MSG internal storage",
+          "items": {
+            "type": "object",
+            "required": ["name", "contentType", "size"],
+            "properties": {
+              "name":        { "type": "string" },
+              "contentType": { "type": ["string", "null"], "description": "MIME type (attachMimeTag)" },
+              "size":        { "type": ["integer", "null"], "description": "Uncompressed size in bytes" }
+            }
+          }
+        },
+        "creationTime":         { "type": ["string", "null"] },
+        "lastModificationTime": { "type": ["string", "null"] },
+        "clientSubmitTime":     { "type": ["string", "null"], "description": "When the sender submitted the message" },
+        "messageDeliveryTime":  { "type": ["string", "null"], "description": "When the message was delivered to the mailbox" }
+      }
+    }
+  ]
+}

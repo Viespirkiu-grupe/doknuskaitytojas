@@ -1,9 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
-import { spawn } from "child_process";
-import treeKill from "tree-kill";
 import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
+import { convertToPdf } from "../utils/libreoffice.js";
 
 const TMP_DIR = path.resolve("./tmp");
 await fs.mkdir(TMP_DIR, { recursive: true });
@@ -14,45 +13,11 @@ await fs.mkdir(TMP_DIR, { recursive: true });
  * @returns {Promise<Buffer>} - Promise that resolves to the PDF file as a Buffer.
  */
 export async function convertDocToPdfBuffer(docPath) {
-  const pdfPath = path.join(TMP_DIR, path.basename(docPath, ".doc") + ".pdf");
-
-  let child;
-  const promise = new Promise((resolve, reject) => {
-    child = spawn("libreoffice", [
-      "--headless",
-      "--convert-to",
-      "pdf",
-      "--outdir",
-      TMP_DIR,
-      docPath,
-    ]);
-
-    child.on("error", reject);
-
-    child.on("exit", async (code) => {
-      try {
-        if (code !== 0)
-          return reject(new Error(`LibreOffice exited with code ${code}`));
-        const buffer = await fs.readFile(pdfPath);
-        await fs.unlink(pdfPath).catch(() => {});
-        resolve(buffer);
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
-
-  const timer = setTimeout(
-    () => {
-      if (child?.pid) treeKill(child.pid, "SIGKILL");
-    },
-    parseInt(process.env.LIBREOFFICE_TIMEOUT ?? "15", 10) * 1000,
-  );
-
+  const pdfPath = path.join(TMP_DIR, `${randomUUID()}.pdf`);
   try {
-    return await promise;
+    await convertToPdf(docPath, pdfPath);
+    return await fs.readFile(pdfPath);
   } finally {
-    clearTimeout(timer);
     await fs.unlink(pdfPath).catch(() => {});
   }
 }
@@ -85,3 +50,11 @@ export async function extractDocContent(url) {
     await fs.unlink(tmpDoc).catch(() => {});
   }
 }
+
+export const fileTypes = [
+  { ext: "doc",   mime: "application/msword" },
+  { ext: "dot",   mime: "application/msword", normalizedAs: "doc" },
+  { ext: "pages", mime: "application/vnd.apple.pages", normalizedAs: "doc" },
+];
+
+export { extractDocContent as extract };

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.email.json",
+  "description": "Shared base schema for email-derived formats (EML, MSG).",
+  "type": "object",
+  "required": ["subject", "from", "headers", "attachments", "sections", "text"],
+  "properties": {
+    "subject": { "type": "string" },
+    "from":    { "$ref": "metadata.parsed.json#/$defs/emailAddress" },
+    "headers": { "$ref": "metadata.parsed.json#/$defs/headers" },
+    "sections": { "$ref": "metadata.parsed.json#/$defs/sections" },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "contentType"],
+        "properties": {
+          "name":        { "type": "string", "description": "Attachment filename" },
+          "contentType": { "type": ["string", "null"], "description": "MIME content type" }
+        }
+      }
+    }
+  },
+  "allOf": [
+    { "$ref": "metadata.parsed.json#/$defs/parsedFields" }
+  ]
+}

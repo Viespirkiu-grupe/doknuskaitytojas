@@ -65,8 +65,8 @@ export function surastiTelefonoNumerius(tekstas = []) {
     }
   }
 
-  return Array.from(telefonaiMap, ([numeris, pagesSet]) => ({
-    numeris,
+  return Array.from(telefonaiMap, ([phone, pagesSet]) => ({
+    phone,
     pages: Array.from(new Set(pagesSet)).sort((a, b) => a - b),
   }));
 }

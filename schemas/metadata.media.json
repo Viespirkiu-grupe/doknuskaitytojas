@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.media.json",
+  "type": "object",
+  "required": ["format", "streams", "videoStream", "audioStream", "tags"],
+  "properties": {
+    "format": {
+      "type": "object",
+      "required": ["name", "longName", "durationSec", "sizeBytes", "bitrateKbps", "streamCount"],
+      "properties": {
+        "name":         { "type": ["string", "null"], "description": "Short format name(s) as reported by ffprobe (e.g. 'mov,mp4,m4a,3gp,3g2,mj2')" },
+        "longName":     { "type": ["string", "null"], "description": "Human-readable format name" },
+        "durationSec":  { "type": ["number",  "null"], "description": "Total duration in seconds" },
+        "sizeBytes":    { "type": ["integer", "null"], "description": "File size in bytes" },
+        "bitrateKbps":  { "type": ["integer", "null"], "description": "Overall bit rate in kilobits per second" },
+        "streamCount":  { "type": ["integer", "null"], "description": "Number of streams in the container" }
+      }
+    },
+    "streams": {
+      "type": "array",
+      "description": "All streams found in the container",
+      "items": { "$ref": "#/$defs/stream" }
+    },
+    "videoStream": {
+      "description": "First video stream; null for audio-only files",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/videoStream" }
+      ]
+    },
+    "audioStream": {
+      "description": "First audio stream; null for video-only files",
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/audioStream" }
+      ]
+    },
+    "tags": {
+      "description": "Container-level tags (title, artist, encoder, etc.); null when none present",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "object", "additionalProperties": { "type": "string" } }
+      ]
+    }
+  },
+  "$defs": {
+    "streamBase": {
+      "type": "object",
+      "properties": {
+        "index":       { "type": ["integer", "null"], "description": "Stream index within the container" },
+        "type":        { "type": ["string",  "null"], "description": "Codec type: 'video', 'audio', 'subtitle', 'data', etc." },
+        "codec":       { "type": ["string",  "null"], "description": "Short codec name (e.g. 'h264', 'aac')" },
+        "codecLong":   { "type": ["string",  "null"], "description": "Full codec description" },
+        "profile":     { "type": ["string",  "null"], "description": "Codec profile (e.g. 'High', 'LC')" },
+        "bitrateKbps": { "type": ["integer", "null"], "description": "Stream bit rate in kilobits per second" },
+        "language":    { "type": ["string",  "null"], "description": "BCP-47 language tag from stream metadata" },
+        "title":       { "type": ["string",  "null"], "description": "Stream title tag" }
+      }
+    },
+    "videoStream": {
+      "allOf": [
+        { "$ref": "#/$defs/streamBase" },
+        {
+          "type": "object",
+          "properties": {
+            "width":       { "type": ["integer", "null"], "description": "Frame width in pixels" },
+            "height":      { "type": ["integer", "null"], "description": "Frame height in pixels" },
+            "pixelFormat": { "type": ["string",  "null"], "description": "Pixel format (e.g. 'yuv420p')" },
+            "aspectRatio": { "type": ["string",  "null"], "description": "Display aspect ratio (e.g. '16:9')" },
+            "fps":         { "type": ["number",  "null"], "description": "Frames per second" },
+            "rotation":    { "type": ["number",  "null"], "description": "Rotation in degrees (from tags or side data)" }
+          }
+        }
+      ]
+    },
+    "audioStream": {
+      "allOf": [
+        { "$ref": "#/$defs/streamBase" },
+        {
+          "type": "object",
+          "properties": {
+            "sampleRate":    { "type": ["integer", "null"], "description": "Sample rate in Hz" },
+            "channels":      { "type": ["integer", "null"], "description": "Number of audio channels" },
+            "channelLayout": { "type": ["string",  "null"], "description": "Channel layout label (e.g. 'stereo')" },
+            "sampleFormat":  { "type": ["string",  "null"], "description": "Sample format (e.g. 'fltp')" }
+          }
+        }
+      ]
+    },
+    "stream": {
+      "oneOf": [
+        { "$ref": "#/$defs/videoStream" },
+        { "$ref": "#/$defs/audioStream" },
+        { "$ref": "#/$defs/streamBase" }
+      ]
+    }
+  },
+  "allOf": [
+    { "$ref": "metadata.parsed.json#/$defs/parsedFields" }
+  ]
+}

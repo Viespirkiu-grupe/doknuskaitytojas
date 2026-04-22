@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.parsed.json",
+  "description": "Shared definitions for all text-based extractors.",
+  "$defs": {
+    "pageList": {
+      "type": "array",
+      "description": "1-based page numbers where this item was found",
+      "items": { "type": "integer" }
+    },
+    "emailAddress": {
+      "description": "A single email address, optionally with a display name",
+      "type": "object",
+      "required": ["email"],
+      "properties": {
+        "name":  { "type": "string", "description": "Display name" },
+        "email": { "type": "string", "format": "email" }
+      }
+    },
+    "headers": {
+      "description": "Email headers keyed by header name. Values are strings for single-occurrence headers and arrays when the same header appears multiple times.",
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "array", "items": { "type": "string" } }
+        ]
+      }
+    },
+    "sections": {
+      "type": "object",
+      "description": "Raw body parts of the email",
+      "properties": {
+        "plain": { "type": "string", "description": "Plain-text body, normalised to LF" },
+        "html":  { "type": "string", "description": "HTML body as received" }
+      }
+    },
+    "parsedFields": {
+      "description": "Fields produced by the common text parser (parsers/viskas.js)",
+      "type": "object",
+      "properties": {
+        "companyIds": {
+          "type": "array",
+          "description": "Lithuanian 9-digit business registration codes found in the text",
+          "items": {
+            "type": "object",
+            "required": ["code", "pages"],
+            "properties": {
+              "code":  { "type": "string", "pattern": "^\\d{9}$" },
+              "pages": { "$ref": "#/$defs/pageList" }
+            }
+          }
+        },
+        "ibans": {
+          "type": "array",
+          "description": "IBAN numbers found in the text",
+          "items": {
+            "type": "object",
+            "required": ["iban", "pages"],
+            "properties": {
+              "iban":  { "type": "string" },
+              "pages": { "$ref": "#/$defs/pageList" }
+            }
+          }
+        },
+        "phones": {
+          "type": "array",
+          "description": "Phone numbers found in the text",
+          "items": {
+            "type": "object",
+            "required": ["phone", "pages"],
+            "properties": {
+              "phone": { "type": "string" },
+              "pages": { "$ref": "#/$defs/pageList" }
+            }
+          }
+        },
+        "links": {
+          "type": "array",
+          "description": "URLs found in the text",
+          "items": {
+            "type": "object",
+            "required": ["uri", "pages"],
+            "properties": {
+              "uri":   { "type": "string" },
+              "pages": { "$ref": "#/$defs/pageList" }
+            }
+          }
+        },
+        "emails": {
+          "type": "array",
+          "description": "Email addresses found in the text and mailto: links",
+          "items": {
+            "type": "object",
+            "required": ["email", "pages"],
+            "properties": {
+              "email": { "type": "string", "format": "email" },
+              "pages": { "$ref": "#/$defs/pageList" }
+            }
+          }
+        },
+        "ipAddresses": {
+          "type": "array",
+          "description": "IPv4 and IPv6 addresses found in the text",
+          "items": {
+            "type": "object",
+            "required": ["ip", "pages"],
+            "properties": {
+              "ip":    { "type": "string" },
+              "pages": { "$ref": "#/$defs/pageList" }
+            }
+          }
+        },
+        "macAddresses": {
+          "type": "array",
+          "description": "MAC addresses found in the text",
+          "items": {
+            "type": "object",
+            "required": ["mac", "pages"],
+            "properties": {
+              "mac":   { "type": "string" },
+              "pages": { "$ref": "#/$defs/pageList" }
+            }
+          }
+        },
+        "domains": {
+          "type": "array",
+          "description": "Unique domains extracted from links and email addresses, sorted",
+          "items": { "type": "string" }
+        },
+        "text": {
+          "type": "string",
+          "description": "Full indexed text ready for full-text search"
+        },
+        "pageCount": {
+          "type": "integer",
+          "description": "Number of pages (or 1 for single-page formats)"
+        },
+        "characterCount": {
+          "type": "integer",
+          "description": "Total character count of the plain-text content"
+        },
+        "wordCount": {
+          "type": "integer",
+          "description": "Total word count of the plain-text content"
+        }
+      }
+    }
+  }
+}

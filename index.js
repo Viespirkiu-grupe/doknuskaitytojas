@@ -4,25 +4,29 @@ import path from "path";
 import dotenv from "dotenv";
 import { log } from "./utils/log.js";
 
-import { extractPdfContent } from "./extractors/pdf.js";
-import { extractDocxContent } from "./extractors/docx.js";
-import { extractXlsxContent } from "./extractors/xlsx.js";
-import { extractPptxContent } from "./extractors/pptx.js";
-import { extractDocContent } from "./extractors/doc.js";
-import { extractXlsContent } from "./extractors/xls.js";
-import { extractPptContent } from "./extractors/ppt.js";
-import { extractZipContent } from "./extractors/zip.js";
-import { extractTxtContent } from "./extractors/txt.js";
-import { extractMsgContent } from "./extractors/msg.js";
-import { extractEmlContent } from "./extractors/eml.js";
-import { extract7zContent } from "./extractors/7z.js";
-import { extractImageContent } from "./extractors/images.js";
-import { extractOdgContent } from "./extractors/odg.js";
-import { extractPubContent } from "./extractors/pub.js";
-import { extractRarContent } from "./extractors/rar.js";
-import { extractAdocContent } from "./extractors/adoc.js";
-
 dotenv.config({ quiet: true });
+
+const extractors = {};
+const MIME_TYPES = {};
+const NORMALIZED_EXT = {};
+for (const dir of ["./extractors", "./extractors/archives"]) {
+  for (const file of (await fs.promises.readdir(dir)).filter(f => f.endsWith(".js"))) {
+    const mod = await import(`${dir}/${file}`);
+    if (!mod.extract || !mod.fileTypes) continue;
+    for (const { ext, mime, normalizedAs } of mod.fileTypes) {
+      extractors[ext] = mod.extract;
+      MIME_TYPES[ext] = mime;
+      if (normalizedAs) NORMALIZED_EXT[ext] = normalizedAs;
+    }
+  }
+}
+
+// Reverse map: mime type → canonical extension (first match wins)
+const MIME_TO_EXT = Object.fromEntries(
+  Object.entries(MIME_TYPES)
+    .filter(([ext]) => !(ext in NORMALIZED_EXT))
+    .map(([ext, mime]) => [mime, ext])
+);
 
 const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
@@ -33,49 +37,30 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 process.env.LIBREOFFICE_TIMEOUT = String(process.env.LIBREOFFICE_TIMEOUT || 15);
 
-const versija = 9;
+const version = 9;
+
+const HOISTED_FIELDS = [
+  "companyIds", "ibans", "phones", "links", "emails",
+  "ipAddresses", "macAddresses", "domains",
+  "pageCount", "characterCount", "wordCount",
+];
+
+function annotateResult(result, ext) {
+  result.mimeType  = MIME_TYPES[ext] ?? "application/octet-stream";
+  result.extension = NORMALIZED_EXT[ext] ?? ext;
+  for (const key of HOISTED_FIELDS) {
+    if (key in result.metadata) {
+      result[key] = result.metadata[key];
+      delete result.metadata[key];
+    }
+  }
+  return result;
+}
 
 // Health check endpoint
 app.get("/healthz", (req, res) => {
   res.status(200).send("OK");
 });
-
-const extractors = {
-  pdf: extractPdfContent,
-  prn: extractPdfContent,
-  docx: extractDocxContent,
-  odt: extractDocxContent,
-  docm: extractDocxContent,
-  dotx: extractDocxContent,
-  doc: extractDocContent,
-  dot: extractDocContent,
-  rtf: extractDocContent,
-  pages: extractDocContent,
-  xlsx: extractXlsxContent,
-  xlsm: extractXlsxContent,
-  xlsb: extractXlsxContent,
-  xls: extractXlsContent,
-  csv: extractXlsContent,
-  pptx: extractPptxContent,
-  ppsx: extractPptxContent,
-  ppt: extractPptContent,
-  zip: extractZipContent,
-  adoc: extractAdocContent,
-  txt: extractTxtContent,
-  url: extractTxtContent,
-  msg: extractMsgContent,
-  eml: extractEmlContent,
-  "7z": extract7zContent,
-  jpg: extractImageContent,
-  jpeg: extractImageContent,
-  png: extractImageContent,
-  tif: extractImageContent,
-  tiff: extractImageContent,
-  jfif: extractImageContent,
-  odg: extractOdgContent,
-  pub: extractPubContent,
-  rar: extractRarContent,
-};
 
 // GET /?url=...&apiKey=...&extension=pdf||docx
 app.get("/", async (req, res) => {
@@ -87,23 +72,27 @@ app.get("/", async (req, res) => {
 
   log(url);
 
-  if (apiKey !== API_KEY) {
+  if (API_KEY && apiKey !== API_KEY) {
     return res.status(403).json({ error: "Invalid API key" });
   }
 
-  const extension = (req.query.extension || "pdf").toLowerCase();
+  const extension = (req.query.extension
+    ? req.query.extension.toLowerCase()
+    : req.query.mime
+      ? (MIME_TO_EXT[req.query.mime] ?? req.query.mime)
+      : "pdf");
 
   if (!extractors[extension]) {
     return res.status(400).json({
       error:
-        "Invalid extension parameter, should be one of: " +
+        "Invalid extension/mime parameter, should be one of: " +
         Object.keys(extractors).join(", "),
     });
   }
 
   try {
     const result = await extractors[extension](url);
-    res.json({ success: true, result, versija });
+    res.json({ success: true, result: annotateResult(result, extension), version });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
     log(`Error processing ${url}:`);
@@ -114,7 +103,7 @@ app.get("/", async (req, res) => {
 // POST /extract
 // Body: { url: "...", apiKey: "...", extension: "pdf" || "docx" }
 app.post("/extract", async (req, res) => {
-  const { url, apiKey, extension = "pdf", puslapiai = [] } = req.body;
+  const { url, apiKey, extension, mime, puslapiai = [] } = req.body;
 
   if (!url) {
     return res.status(400).json({ error: "Missing url parameter" });
@@ -122,16 +111,20 @@ app.post("/extract", async (req, res) => {
 
   log(url);
 
-  if (apiKey !== API_KEY) {
+  if (API_KEY && apiKey !== API_KEY) {
     return res.status(403).json({ error: "Invalid API key" });
   }
 
-  const ext = extension.toLowerCase();
+  const ext = extension
+    ? extension.toLowerCase()
+    : mime
+      ? (MIME_TO_EXT[mime] ?? mime)
+      : "pdf";
 
   if (!extractors[ext]) {
     return res.status(400).json({
       error:
-        "Invalid extension parameter, should be one of: " +
+        "Invalid extension/mime parameter, should be one of: " +
         Object.keys(extractors).join(", "),
     });
   }
@@ -141,7 +134,7 @@ app.post("/extract", async (req, res) => {
       puslapiai,
     };
     const result = await extractors[ext](url, options);
-    res.json({ success: true, result, versija });
+    res.json({ success: true, result: annotateResult(result, ext), version });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
     log(`Error processing ${url}:`);

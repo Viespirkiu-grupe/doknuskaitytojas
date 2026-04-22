@@ -8,13 +8,13 @@ import { surastiMacAdresus } from "./macAdresai.js";
 
 export function gautiViskaIsTeksto(pages = []) {
   let result = {
-    jarKodai: surastiJarKodus(pages),
-    ibanNumeriai: surastiIbanNumerius(pages),
-    telefonai: surastiTelefonoNumerius(pages),
+    companyIds: surastiJarKodus(pages),
+    ibans: surastiIbanNumerius(pages),
+    phones: surastiTelefonoNumerius(pages),
     links: surastiNuorodas(pages),
     emails: surastiEmails(pages),
-    ipAdresai: surastiIpAdresus(pages),
-    macAdresai: surastiMacAdresus(pages),
+    ipAddresses: surastiIpAdresus(pages),
+    macAddresses: surastiMacAdresus(pages),
     pageCount: pages.length,
     characterCount: pages.reduce((acc, page) => acc + page.length, 0),
     wordCount: pages.reduce((acc, page) => {

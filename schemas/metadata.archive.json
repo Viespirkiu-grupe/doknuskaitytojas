@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.archive.json",
+  "$defs": {
+    "archiveFile": {
+      "type": "object",
+      "required": ["name", "path", "size", "compressedSize", "extension", "lastModDate", "isDirectory", "md5"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Filename (basename only)"
+        },
+        "path": {
+          "type": "string",
+          "description": "Path relative to the archive root"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Uncompressed size in bytes"
+        },
+        "compressedSize": {
+          "type": ["integer", "null"],
+          "description": "Compressed size in bytes (ZIP), or null when not available (7z, RAR via WASM FS)"
+        },
+        "extension": {
+          "type": ["string", "null"],
+          "description": "Lowercase file extension, or null for directories"
+        },
+        "lastModDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last modification time"
+        },
+        "isDirectory": {
+          "type": "boolean"
+        },
+        "compressionMethod": {
+          "type": "integer",
+          "description": "ZIP compression method code (0 = stored, 8 = deflate); absent for 7z and RAR"
+        },
+        "md5": {
+          "type": ["string", "null"],
+          "pattern": "^[0-9a-f]{32}$",
+          "description": "MD5 of uncompressed content, or null for directories"
+        },
+        "children": {
+          "type": "array",
+          "description": "Present only in filesTree, absent in the flat files list",
+          "items": { "$ref": "#/$defs/archiveFile" }
+        }
+      }
+    }
+  },
+  "type": "object",
+  "required": ["files", "filesTree"],
+  "additionalProperties": false,
+  "properties": {
+    "files": {
+      "type": "array",
+      "description": "Flat list of all files in the archive (directories excluded)",
+      "items": { "$ref": "#/$defs/archiveFile" }
+    },
+    "filesTree": {
+      "type": "array",
+      "description": "Directory tree preserving the archive's folder structure",
+      "items": { "$ref": "#/$defs/archiveFile" }
+    }
+  }
+}

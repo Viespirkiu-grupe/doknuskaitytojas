@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "metadata.json",
+  "oneOf": [
+    { "$ref": "metadata.thumbsdb.json" },
+    { "$ref": "metadata.archive.json" },
+    { "$ref": "metadata.adoc.json" },
+    { "$ref": "metadata.email.json" },
+    { "$ref": "metadata.eml.json" },
+    { "$ref": "metadata.msg.json" }
+  ]
+}
