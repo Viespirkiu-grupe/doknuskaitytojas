@@ -38,27 +38,26 @@ export async function convertDocxToPdfBuffer(docxPath) {
  */
 export async function extractDocxContent(url) {
   // 1. Download DOCX
-  const docxBuffer = Buffer.from(await fetchSafe(url));
+  const docxBuffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const tmpDocx = path.join(TMP_DIR, `${randomUUID()}.docx`);
 
   await fs.writeFile(tmpDocx, docxBuffer);
 
   try {
-    // Convert DOCX → PDF buffer
+    let t = Date.now();
     const pdfBuffer = await convertDocxToPdfBuffer(tmpDocx);
+    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
 
-    // Extract DOCX metadata
     const metadata = await extractDocxMetadata(tmpDocx);
 
-    // Run PDF extractor
     let result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
 
     result.metadata = { ...result.metadata, ...metadata };
 
     return result;
   } finally {
-    await fs.unlink(tmpDocx).catch(() => {}); // cleanup DOCX
+    await fs.unlink(tmpDocx).catch(() => {});
   }
 }
 

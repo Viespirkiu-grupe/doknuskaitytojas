@@ -20,7 +20,7 @@ import { fetchSafe } from "../../utils/fetchSafe.js";
 export async function extractRarContent(url) {
   const sevenZip = await SevenZip();
 
-  const archiveBuffer = new Uint8Array(await fetchSafe(url));
+  const archiveBuffer = new Uint8Array(Buffer.isBuffer(url) ? url : await fetchSafe(url));
   if (archiveBuffer.byteLength > 1_000_000_000)
     throw new Error(`RAR archive too large: ${archiveBuffer.byteLength} bytes (limit 1 GB)`);
 

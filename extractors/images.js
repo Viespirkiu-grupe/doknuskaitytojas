@@ -354,7 +354,6 @@ function buildStructuredMetadata(tags, trueFormat, buffer) {
  * @returns {Promise<{ pages: string[], metadata: ImageMetadata & import("../parsers/viskas.js") }>}
  */
 export async function extractImageContent(input, options = {}) {
-  let start = new Date();
   let arrayBuffer;
 
   if (input instanceof ArrayBuffer) {
@@ -364,9 +363,8 @@ export async function extractImageContent(input, options = {}) {
   } else {
     arrayBuffer = await fetchSafe(input);
   }
-  log(`1. Fetch image took ${((new Date() - start) / 1000).toFixed(3)}s`);
 
-  start = new Date();
+  const t = Date.now();
   const trueFormat = detectFormatFromBytes(arrayBuffer);
   let imageMetadata;
   try {
@@ -392,8 +390,8 @@ export async function extractImageContent(input, options = {}) {
       iptc:        null,
     };
   }
-  log(`2. Metadata read took ${((new Date() - start) / 1000).toFixed(3)}s`);
 
+  log(`Metadata: ${((Date.now() - t) / 1000).toFixed(2)}s`);
   const pages       = Array.isArray(options.puslapiai) ? options.puslapiai : [];
   const parsedFields = gautiViskaIsTeksto(pages);
 

@@ -30,14 +30,15 @@ export async function convertDocToPdfBuffer(docPath) {
  * @returns {Promise<{ text: string, metadata: object }>} - Promise that resolves to an object containing extracted text and metadata.
  */
 export async function extractDocContent(url) {
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const tmpDoc = path.join(TMP_DIR, `${randomUUID()}.doc`);
   await fs.writeFile(tmpDoc, buffer);
 
   try {
-    // Convert DOC → PDF
+    let t = Date.now();
     const pdfBuffer = await convertDocToPdfBuffer(tmpDoc);
+    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
 
     // Extract PDF content & metadata
     const result = await extractPdfContent(pdfBuffer, {

@@ -66,7 +66,7 @@ const MAX_ENTRY_BYTES = 1_000_000_000; // 1 GB per entry
 const MAX_TOTAL_BYTES = 2_000_000_000; // 2 GB cumulative uncompressed
 
 export async function extractZipContent(url) {
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   return new Promise((resolve, reject) => {
     yauzl.fromBuffer(

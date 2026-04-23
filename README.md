@@ -30,9 +30,10 @@ REST API microservice that extracts text, metadata, and structured data from doc
     Optional variables:
 
     ```shell
-    LIBREOFFICE_TIMEOUT=15  # seconds before LibreOffice is killed (default 15)
-    MAX_CONCURRENT=4        # parallel extraction limit (default 4)
-    PDF_MAX_PAGES=10000     # page cap for PDF extraction (default 10000)
+    LIBREOFFICE_TIMEOUT=15       # seconds before LibreOffice is killed (default 15)
+    MAX_CONCURRENT=4             # parallel extraction/processing limit (default 4)
+    MAX_CONCURRENT_DOWNLOADS=8   # parallel download limit (default 8)
+    PDF_MAX_PAGES=10000          # page cap for PDF extraction (default 10000)
     ```
 
 4. Run the service

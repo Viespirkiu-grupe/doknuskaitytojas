@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { log, requestContext } from "./utils/log.js";
 import pLimit from "p-limit";
 import { randomUUID } from "crypto";
+import { fetchSafe, fetchSafeText } from "./utils/fetchSafe.js";
 
 dotenv.config({ quiet: true });
 
@@ -54,6 +55,15 @@ function cleanTmp() {
 setInterval(cleanTmp, 60_000).unref();
 
 const limit = pLimit(Number(process.env.MAX_CONCURRENT) || 4);
+
+// Kas sekundę logina eilės būseną (tik kai yra aktyvių užduočių)
+setInterval(() => {
+  const active = limit.activeCount;
+  const pending = limit.pendingCount;
+  if (active > 0 || pending > 0) {
+    log(`Eilė: ${active} apdorojama, ${pending} laukia`);
+  }
+}, 1000).unref();
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -120,14 +130,27 @@ app.get("/", requireAuth, async (req, res) => {
     });
   }
 
-  await requestContext.run(reqId, async () => {
-    log(url);
+  const filename = decodeURIComponent(url).split("/").pop().split("?")[0] || url;
+  await requestContext.run({ reqId, filename }, async () => {
+    log(`↓ Atsisiunčiama [${extension}] ${url}`);
     try {
-      const result = await limit(() => extractors[extension](url));
+      let t = Date.now();
+      const data = extension === "eml" ? await fetchSafeText(url) : Buffer.from(await fetchSafe(url));
+      const downloadSec = ((Date.now() - t) / 1000).toFixed(2);
+      log(`↓ Atsisiųsta: ${downloadSec}s`);
+
+      t = Date.now();
+      const result = await limit(() => {
+        log(`⚙ Apdorojama`);
+        return extractors[extension](data);
+      });
+      const processSec = ((Date.now() - t) / 1000).toFixed(2);
+      log(`✓ Baigta: ${processSec}s`);
+
       res.json({ success: true, result: annotateResult(result, extension), version });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
-      log(`Error processing ${url}:`, err);
+      log(`✗ Klaida:`, err.message);
     }
   });
 });
@@ -149,14 +172,27 @@ app.post("/extract", requireAuth, async (req, res) => {
     });
   }
 
-  await requestContext.run(reqId, async () => {
-    log(url);
+  const filename = decodeURIComponent(url).split("/").pop().split("?")[0] || url;
+  await requestContext.run({ reqId, filename }, async () => {
+    log(`↓ Atsisiunčiama [${ext}] ${url}`);
     try {
-      const result = await limit(() => extractors[ext](url, { puslapiai }));
+      let t = Date.now();
+      const data = ext === "eml" ? await fetchSafeText(url) : Buffer.from(await fetchSafe(url));
+      const downloadSec = ((Date.now() - t) / 1000).toFixed(2);
+      log(`↓ Atsisiųsta: ${downloadSec}s`);
+
+      t = Date.now();
+      const result = await limit(() => {
+        log(`⚙ Apdorojama`);
+        return extractors[ext](data, { puslapiai });
+      });
+      const processSec = ((Date.now() - t) / 1000).toFixed(2);
+      log(`✓ Baigta: ${processSec}s`);
+
       res.json({ success: true, result: annotateResult(result, ext), version });
     } catch (err) {
       res.status(500).json({ success: false, error: err.message });
-      log(`Error processing ${url}:`, err);
+      log(`✗ Klaida:`, err.message);
     }
   });
 });

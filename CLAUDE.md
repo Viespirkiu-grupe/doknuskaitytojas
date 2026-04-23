@@ -85,6 +85,6 @@ Plus word/character counts.
 - Temporary files are written to `./tmp/`; extractors should clean up after themselves, and `index.js` runs a periodic cleanup every 60 s that removes files older than 1 hour
 - LibreOffice is run as a subprocess; `tree-kill` ensures cleanup of its child processes on timeout or error
 - ZIP/RAR filename encoding is auto-detected with a Lithuanian character frequency heuristic
-- `fetchSafe.js` enforces a 30 s timeout and 1 GB limit; size is checked against actual byte length (not character count)
+- `fetchSafe.js` enforces a 30 s timeout and 1 GB limit; size is checked against actual byte length (not character count); concurrent downloads are throttled by `MAX_CONCURRENT_DOWNLOADS` (default 8), independently from `MAX_CONCURRENT` which limits full extraction jobs
 - `telefonai.js` normalises all Lithuanian numbers to `+370XXXXXXXX`; international numbers are matched by country-code prefix but only when written without spaces
 - `nustatytiKokybiskesniTeksta.js` scores text quality via 12 weighted criteria; all regex patterns are module-level constants to avoid repeated compilation

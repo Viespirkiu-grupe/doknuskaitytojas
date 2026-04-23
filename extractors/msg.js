@@ -89,7 +89,7 @@ function formatAddress(addr) {
  * }>}
  */
 export async function extractMsgContent(url) {
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const msgInfo = new MsgReader.default(buffer).getFileData();
 

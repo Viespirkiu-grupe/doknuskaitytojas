@@ -372,11 +372,12 @@ function extractVersionInfo(buf, rsrcOff, rsrcRVA, sections) {
 export async function extractExeContent(url) {
   const tmpFile = path.join(TMP_DIR, `${randomUUID()}.exe`);
   try {
-    log(url);
-    const buf = Buffer.from(await fetchSafe(url));
+    const buf = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
     fs.writeFileSync(tmpFile, buf);
 
+    const t = Date.now();
     const peData = parsePe(buf);
+    log(`PE parse: ${((Date.now() - t) / 1000).toFixed(2)}s`);
 
     // Build a small text corpus for the pattern parsers
     const corpus = [

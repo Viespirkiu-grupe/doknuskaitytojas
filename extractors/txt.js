@@ -24,7 +24,7 @@ import { fetchSafe } from "../utils/fetchSafe.js";
  * }>}
  */
 export async function extractTxtContent(url) {
-  const buf = Buffer.from(await fetchSafe(url));
+  const buf = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
   const { encoding, text: rawText } = detectEncoding(buf);
 
   const text = rawText.replace(/\r\n/g, "\n");

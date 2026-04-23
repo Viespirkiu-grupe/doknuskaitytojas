@@ -352,7 +352,7 @@ function buildTree(files) {
 // ── Main extractor ─────────────────────────────────────────────────────────
 
 export async function extractAdocContent(url) {
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const entries = await readAllEntries(buffer);
 

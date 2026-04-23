@@ -386,21 +386,18 @@ async function findSloppyRedactions(pdfPage, pageNumber, tolerance, textContent)
  * @returns {Promise<{ pages: string[], metadata: object }>}
  */
 export async function extractPdfContent(input, options = {}) {
-  let start = new Date();
-
   let buffer;
   if (Buffer.isBuffer(input)) {
     buffer = input;
   } else {
     buffer = Buffer.from(await fetchSafe(input));
   }
-  log(`1. Fetchpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
 
   // Extract digital signatures via pdfsig (poppler-utils) — skip for converted docs
-  start = new Date();
   let signatureInfo = null;
   if (!options.skipPdfMetadata) {
     const tmpFile = path.join(TMP_DIR, `${randomUUID()}.pdf`);
+    const t = Date.now();
     try {
       fs.writeFileSync(tmpFile, buffer);
       signatureInfo = await runPdfSig(tmpFile);
@@ -409,11 +406,11 @@ export async function extractPdfContent(input, options = {}) {
     } finally {
       try { fs.unlinkSync(tmpFile); } catch {}
     }
+    log(`Parašai: ${((Date.now() - t) / 1000).toFixed(2)}s`);
   }
-  log(`2. Signpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
 
   // Extract page text, links, and annotations via pdfjs-dist
-  start = new Date();
+  let start = Date.now();
   const pdf = await getDocument({ data: new Uint8Array(buffer), verbosity: 0 }).promise;
 
   const pages          = [];
@@ -462,7 +459,7 @@ export async function extractPdfContent(input, options = {}) {
       allRedactions.push(...pageFindings);
     }
   }
-  log(`3. PDFJS took ${((new Date() - start) / 1000).toFixed(3)}s`);
+  log(`Puslapiai: ${((Date.now() - start) / 1000).toFixed(2)}s`);
 
   // Build metadata from PDF info dict
   let metadata;

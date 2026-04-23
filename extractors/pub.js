@@ -19,14 +19,16 @@ async function convertPubToPdfBuffer(pubPath) {
 }
 
 export async function extractPubContent(url) {
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const tmpPub = path.join(TMP_DIR, `${randomUUID()}.pub`);
   await fs.writeFile(tmpPub, buffer);
 
   try {
     // Convert PUB → PDF
+    let t = Date.now();
     const pdfBuffer = await convertPubToPdfBuffer(tmpPub);
+    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
 
     // Extract PDF content & metadata
     const result = await extractPdfContent(pdfBuffer, {

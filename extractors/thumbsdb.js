@@ -53,13 +53,9 @@ function jpegDimensions(buf) {
  * @returns {Promise<{ pages: string[], metadata: { files: ThumbsdbFile[] } }>}
  */
 export async function extractThumbsdbContent(url) {
-  let start = new Date();
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
-  const buffer = Buffer.from(await fetchSafe(url));
-
-  log(`1. Fetch took ${((new Date() - start) / 1000).toFixed(3)}s`);
-  start = new Date();
-
+  const t = Date.now();
   const workbook = CFB.read(buffer, { type: "buffer" });
   const files = [];
 
@@ -87,8 +83,7 @@ export async function extractThumbsdbContent(url) {
     });
   }
 
-  log(`2. Parsing took ${((new Date() - start) / 1000).toFixed(3)}s`);
-
+  log(`Parsing: ${((Date.now() - t) / 1000).toFixed(2)}s`);
   return { pages: [], metadata: { files } };
 }
 

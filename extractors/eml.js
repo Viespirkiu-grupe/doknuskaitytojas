@@ -92,7 +92,7 @@ function formatAddress(addr) {
  * }>}
  */
 export async function extractEmlContent(url) {
-  const eml = await fetchSafeText(url);
+  const eml = Buffer.isBuffer(url) ? url.toString('utf8') : await fetchSafeText(url);
   if (eml.trim() === "") throw new Error("Empty EML content");
 
   const msgInfo = await new Promise((resolve, reject) => {

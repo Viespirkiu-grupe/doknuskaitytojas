@@ -19,14 +19,16 @@ async function convertOdgToPdfBuffer(odgPath) {
 }
 
 export async function extractOdgContent(url) {
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const tmpOdg = path.join(TMP_DIR, `${randomUUID()}.odg`);
   await fs.writeFile(tmpOdg, buffer);
 
   try {
     // Convert ODG → PDF
+    let t = Date.now();
     const pdfBuffer = await convertOdgToPdfBuffer(tmpOdg);
+    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
 
     // Extract PDF content & metadata
     const result = await extractPdfContent(pdfBuffer, {

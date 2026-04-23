@@ -19,14 +19,16 @@ export async function convertXlsToPdfBuffer(xlsPath) {
 }
 
 export async function extractXlsContent(url) {
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const tmpXls = path.join(TMP_DIR, `${randomUUID()}.xls`);
   await fs.writeFile(tmpXls, buffer);
 
   try {
     // Convert XLS → PDF
+    let t = Date.now();
     const pdfBuffer = await convertXlsToPdfBuffer(tmpXls);
+    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
 
     // Extract PDF content & metadata
     const result = await extractPdfContent(pdfBuffer, {

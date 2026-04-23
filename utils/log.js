@@ -4,12 +4,6 @@ import { AsyncLocalStorage } from "async_hooks";
 
 export const requestContext = new AsyncLocalStorage();
 
-/**
- * Generate a pastel color based on a seed string.
- * Uses HSL to ensure pastel shades.
- * @param {string} seed - The seed string to generate the color from.
- * @returns {string} - The ANSI escape code for the generated color.
- */
 function pastelColor(seed) {
   const hash = crypto
     .createHash("md5")
@@ -17,23 +11,13 @@ function pastelColor(seed) {
     .digest("hex");
   const num = parseInt(hash.slice(0, 6), 16);
 
-  // Generate pastel HSL
   const hue = num % 360;
-  const saturation = 60 + (num % 20); // 60–79%
-  const lightness = 70 + (num % 10); // 70–79% (slight variation)
+  const saturation = 60 + (num % 20);
+  const lightness = 70 + (num % 10);
 
-  return `\x1b[38;2;${hslToRgb(hue, saturation / 100, lightness / 100).join(
-    ";",
-  )}m`;
+  return `\x1b[38;2;${hslToRgb(hue, saturation / 100, lightness / 100).join(";",)}m`;
 }
 
-/**
- * Convert HSL to RGB.
- * @param {number} h - Hue (0-360)
- * @param {number} s - Saturation (0-1)
- * @param {number} l - Lightness (0-1)
- * @returns {number[]} - Array of RGB values [r, g, b] (0-255)
- */
 function hslToRgb(h, s, l) {
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
@@ -54,10 +38,6 @@ function hslToRgb(h, s, l) {
   ];
 }
 
-/**
- * Get the filename of the caller function.
- * @returns {string} - The filename of the caller.
- */
 function getCallerFile() {
   const origPrepareStackTrace = Error.prepareStackTrace;
   Error.prepareStackTrace = (_, stack) => stack;
@@ -65,15 +45,10 @@ function getCallerFile() {
   const stack = err.stack;
   Error.prepareStackTrace = origPrepareStackTrace;
 
-  // stack[0] = this function, stack[1] = log(), stack[2] = caller
   const caller = stack[2];
   return path.basename(caller.getFileName());
 }
 
-/** Log a message with timestamp and caller file, color-coded.
- * @param {string} text - The message to log.
- * @param {object} options - Additional options (currently unused).
- */
 export function log(...args) {
   const time = new Date().toLocaleTimeString("lt-LT", {
     hour12: false,
@@ -86,9 +61,14 @@ export function log(...args) {
   const color = pastelColor(caller);
   const reset = "\x1b[0m";
   const gray = "\x1b[90m";
+  const bold = "\x1b[1m";
 
-  const reqId = requestContext.getStore();
+  const ctx = requestContext.getStore();
+  const reqId = ctx?.reqId;
+  const filename = ctx?.filename;
+
   const idPart = reqId ? ` ${gray}[${reqId}]${reset}` : "";
+  const filePart = filename ? ` ${bold}${filename}${reset}` : "";
 
-  console.log(`${gray}[${time}]${reset} ${color}[${caller}]${reset}${idPart}`, ...args);
+  console.log(`${gray}[${time}]${reset} ${color}[${caller}]${reset}${idPart}${filePart}`, ...args);
 }

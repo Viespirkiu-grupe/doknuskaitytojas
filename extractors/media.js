@@ -165,11 +165,12 @@ function buildMetadata(probe) {
 export async function extractMediaContent(url) {
   const tmpFile = path.join(TMP_DIR, `${randomUUID()}.media`);
   try {
-    log(url);
-    const buf = Buffer.from(await fetchSafe(url));
+    const buf = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
     fs.writeFileSync(tmpFile, buf);
 
+    const t = Date.now();
     const probe = await runFfprobe(tmpFile);
+    log(`ffprobe: ${((Date.now() - t) / 1000).toFixed(2)}s`);
     const metadata = buildMetadata(probe);
 
     const parsedFields = gautiViskaIsTeksto([]);

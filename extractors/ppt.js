@@ -19,14 +19,16 @@ export async function convertPptToPdfBuffer(pptPath) {
 }
 
 export async function extractPptContent(url) {
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const tmpPpt = path.join(TMP_DIR, `${randomUUID()}.ppt`);
   await fs.writeFile(tmpPpt, buffer);
 
   try {
     // Convert PPT → PDF
+    let t = Date.now();
     const pdfBuffer = await convertPptToPdfBuffer(tmpPpt);
+    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
 
     // Extract PDF content & metadata
     const result = await extractPdfContent(pdfBuffer, {

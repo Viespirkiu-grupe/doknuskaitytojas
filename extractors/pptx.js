@@ -37,14 +37,15 @@ export async function convertPptxToPdfBuffer(pptxPath) {
  */
 export async function extractPptxContent(url) {
   // 1. Download PPTX
-  const pptxBuffer = Buffer.from(await fetchSafe(url));
+  const pptxBuffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const tmpPptx = path.join(TMP_DIR, `${randomUUID()}.pptx`);
   await fs.writeFile(tmpPptx, pptxBuffer);
 
   try {
-    // Convert PPTX → PDF buffer
+    let t = Date.now();
     const pdfBuffer = await convertPptxToPdfBuffer(tmpPptx);
+    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
 
     // Extract PPTX metadata
     const metadata = await extractPptxMetadata(tmpPptx);

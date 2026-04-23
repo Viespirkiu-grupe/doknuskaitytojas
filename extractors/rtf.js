@@ -72,8 +72,7 @@ function parseRtfMetadata(buffer) {
 }
 
 export async function extractRtfContent(url) {
-  log(url);
-  const buffer = Buffer.from(await fetchSafe(url));
+  const buffer = Buffer.isBuffer(url) ? url : Buffer.from(await fetchSafe(url));
 
   const rtfMetadata = parseRtfMetadata(buffer);
 
@@ -82,8 +81,10 @@ export async function extractRtfContent(url) {
 
   const pdfPath = path.join(TMP_DIR, `${randomUUID()}.pdf`);
   try {
+    let t = Date.now();
     await convertToPdf(tmpRtf, pdfPath);
     const pdfBuffer = await fs.readFile(pdfPath);
+    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
     const result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
     Object.assign(result.metadata, rtfMetadata);
     return result;
