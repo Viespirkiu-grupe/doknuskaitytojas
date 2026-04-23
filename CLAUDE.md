@@ -20,13 +20,17 @@ npm install
 node index.js
 ```
 
-Environment variables: `PORT` (default 3000), `API_KEY` (required for all requests), `LIBREOFFICE_TIMEOUT` (default 15 seconds).
+Environment variables: `PORT` (default 3000), `API_KEY` (required for all requests), `LIBREOFFICE_TIMEOUT` (default 15 seconds), `MAX_CONCURRENT` (default 4), `PDF_MAX_PAGES` (default 10000).
 
 ## API Endpoints
 
-- `GET /healthz` — health check
-- `GET /?url=<encoded_url>&extension=pdf&apiKey=<key>` — extract document
-- `POST /extract` — body: `{ url, apiKey, extension, puslapiai: [] }` — `puslapiai` is an optional page filter array
+All endpoints (except `/healthz`) require `Authorization: Bearer <API_KEY>` header.
+
+- `GET /healthz` — health check (no auth)
+- `GET /?url=<encoded_url>&extension=pdf` — extract document
+- `POST /extract` — body: `{ url, extension?, mime?, puslapiai?: [] }` — `puslapiai` is an optional page filter array
+
+All error responses have shape `{ success: false, error: "..." }`. Success responses have `{ success: true, result: {...}, version: N }`.
 
 ## Architecture
 
@@ -65,7 +69,8 @@ Plus word/character counts.
 
 ### Utilities (`/utils/*.js`)
 
-- `log.js` — colored timestamped logging with automatic caller identification
+- `log.js` — colored timestamped logging with automatic caller identification; propagates request correlation IDs via `AsyncLocalStorage`
+- `fetchSafe.js` — fetch wrapper with 30s timeout and 1 GB size limit; used by all extractors
 - `mergeObject.js` — deep object merge used when combining results from archive entries
 - `nustatytiKokybiskesniTeksta.js` — chooses the better-quality text between two extraction attempts
 
@@ -76,7 +81,7 @@ Plus word/character counts.
 
 ## Notes
 
-- The service is version-stamped (`versija` constant in `index.js`); increment when making significant changes
+- The service is version-stamped (`version` constant in `index.js`); increment when making significant changes
 - Temporary files are written to `./tmp/` and should be cleaned up by extractors after use
 - LibreOffice is run as a subprocess; `tree-kill` ensures cleanup of its child processes on timeout or error
 - ZIP/RAR filename encoding is auto-detected with a Lithuanian character frequency heuristic

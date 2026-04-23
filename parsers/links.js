@@ -8,7 +8,7 @@ export function surastiNuorodas(tekstas = []) {
   const nuorodosMap = new Map();
 
   // Regex for http(s), mailto and tel links
-  const linkRegex = /\b(?:https?:\/\/|mailto:|tel:)[^\s/$.?#].[^\s]*\b/g;
+  const linkRegex = /\b(?:https?:\/\/|mailto:|tel:)[^\s/$.?#].[^\s]*/g;
 
   tekstas.forEach((puslapis, index) => {
     let match;

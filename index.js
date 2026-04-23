@@ -36,6 +36,23 @@ for (const f of fs.readdirSync(TMP_DIR)) {
   fs.rmSync(path.join(TMP_DIR, f), { recursive: true, force: true });
 }
 
+const TMP_MAX_AGE_MS = 60 * 60 * 1000; // 1 valanda
+function cleanTmp() {
+  const now = Date.now();
+  for (const f of fs.readdirSync(TMP_DIR)) {
+    const fp = path.join(TMP_DIR, f);
+    try {
+      const { mtimeMs } = fs.statSync(fp);
+      if (now - mtimeMs > TMP_MAX_AGE_MS) {
+        fs.rmSync(fp, { recursive: true, force: true });
+      }
+    } catch {
+      // failas jau pašalintas arba nepasiekiamas
+    }
+  }
+}
+setInterval(cleanTmp, 60_000).unref();
+
 const limit = pLimit(Number(process.env.MAX_CONCURRENT) || 4);
 
 const app = express();

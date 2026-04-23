@@ -30,6 +30,7 @@ export async function fetchSafeText(url, opts) {
   const maxBytes = opts?.maxBytes ?? MAX_BYTES;
   const res = await fetchWithGuard(url, opts);
   const text = await res.text();
-  if (text.length > maxBytes) throw new Error(`Response too large: ${text.length} chars (limit ${maxBytes})`);
+  const byteLen = Buffer.byteLength(text, "utf8");
+  if (byteLen > maxBytes) throw new Error(`Response too large: ${byteLen} bytes (limit ${maxBytes})`);
   return text;
 }

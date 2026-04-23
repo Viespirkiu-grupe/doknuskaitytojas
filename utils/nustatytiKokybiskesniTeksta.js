@@ -1,14 +1,30 @@
 const DEBUG_LOG = false;
+
+const RE_NON_WORD = /[^\p{L}\p{N}]+/gu;
+const RE_NON_WORD_DASH = /[^\p{L}\p{N}\-–—]+/gu;
+const RE_NON_LETTER = /[^\p{L}]/gu;
+const RE_WHITESPACE = /\s+/;
+const RE_JUNK = /[@#$%^&*_=+\[\]{}|~<>]/g;
+const RE_UPPER_START = /^[\p{Lu}]/u;
+const RE_SENTENCE_END = /[.!?]/g;
+const RE_ALNUM = /[a-zA-Z0-9]/g;
+const RE_INNER_UPPER = /[A-ZĄČĘĖĮŠŲŪŽ]/;
+const RE_ALL_DIGITS = /^\d+$/;
+const RE_DASH = /-|–|—/;
+const RE_DIGIT = /\d/;
+const RE_DIGIT_GLOBAL = /\d/g;
+
+function tokenize(tekstas) {
+  return tekstas.replace(RE_NON_WORD, " ").trim().split(RE_WHITESPACE);
+}
+
 const kriterijai = [
   {
     pavadinimas: "Žodžio ilgis",
     aprasymas: "Vertina kiek vidutinis žodžio ilgis toli nuo LT-EN vidurkių",
     weight: 1,
     judge: (tekstas) => {
-      const words = tekstas
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .trim()
-        .split(/\s+/);
+      const words = tokenize(tekstas);
       if (words.length === 0) return 0;
       const totalLength = words.reduce((sum, word) => sum + word.length, 0);
       const vidurkis = totalLength / words.length;
@@ -27,7 +43,7 @@ const kriterijai = [
     weight: 2,
     judge: (tekstas) => {
       const LT = "ąčęėįšūžĄČĘĖĮŠŪŽ";
-      const letters = tekstas.replace(/[^\p{L}]/gu, "");
+      const letters = tekstas.replace(RE_NON_LETTER, "");
       if (!letters.length) return 0;
       const ratio =
         [...letters].filter((c) => LT.includes(c)).length / letters.length;
@@ -45,10 +61,9 @@ const kriterijai = [
       "Kokia dalis teksto yra neįprasti simboliai (pvz. @#$%^&*_=+[]{}|~<>)",
     weight: 5,
     judge: (tekstas) => {
-      const junk = /[@#$%^&*_=+\[\]{}|~<>]/g;
       const total = tekstas.length;
       if (total === 0) return 0;
-      const ratio = (tekstas.match(junk) || []).length / total;
+      const ratio = (tekstas.match(RE_JUNK) || []).length / total;
       // Optimalu 0–0.02, >0.1 = blogai
       if (ratio <= 0.02) return 1;
       if (ratio >= 0.1) return 0;
@@ -61,13 +76,10 @@ const kriterijai = [
     aprasymas: "Didžiųjų raidžių proporcija visame tekste",
     weight: 2,
     judge: (tekstas) => {
-      const words = tekstas
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .trim()
-        .split(/\s+/);
+      const words = tokenize(tekstas);
       if (!words.length) return 0;
       const ratio =
-        words.filter((w) => /^[\p{Lu}]/u.test(w)).length / words.length;
+        words.filter((w) => RE_UPPER_START.test(w)).length / words.length;
 
       if (ratio === 0) return 0.5;
       if (ratio >= 0.01 && ratio <= 0.1) return 1;
@@ -85,12 +97,9 @@ const kriterijai = [
     aprasymas: "Skyrybos ženklų kiekis",
     weight: 2,
     judge: (tekstas) => {
-      const words = tekstas
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .trim()
-        .split(/\s+/);
+      const words = tokenize(tekstas);
       if (!words.length) return 0;
-      const ratio = (tekstas.match(/[.!?]/g) || []).length / words.length;
+      const ratio = (tekstas.match(RE_SENTENCE_END) || []).length / words.length;
       const ideal = 0.08;
       const delta = 0.05; // ±0.05 = gerai
       if (ratio < ideal - delta) return ratio / (ideal - delta);
@@ -104,10 +113,7 @@ const kriterijai = [
     aprasymas: "Ilgų žodžių dalis",
     weight: 1,
     judge: (tekstas) => {
-      const words = tekstas
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .trim()
-        .split(/\s+/);
+      const words = tokenize(tekstas);
       if (!words.length) return 0;
       const ratio = words.filter((w) => w.length > 20).length / words.length;
       // Idealus 0–0.02, >0.1 = blogai
@@ -121,10 +127,7 @@ const kriterijai = [
     aprasymas: "Trumpų žodžių dalis",
     weight: 2,
     judge: (tekstas) => {
-      const words = tekstas
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .trim()
-        .split(/\s+/);
+      const words = tokenize(tekstas);
       if (!words.length) return 0;
       const shortRatio =
         words.filter((w) => w.length <= 3).length / words.length;
@@ -145,7 +148,7 @@ const kriterijai = [
       if (total === 0) return 0;
       const LT = "ąčęėįšūžĄČĘĖĮŠŪŽ";
       const count =
-        (tekstas.match(/[a-zA-Z0-9]/g) || []).length +
+        (tekstas.match(RE_ALNUM) || []).length +
         [...tekstas].filter((c) => LT.includes(c)).length;
       return count / total;
     },
@@ -155,10 +158,7 @@ const kriterijai = [
     aprasymas: "Vertina pavienius simbolius arba 1 raidės žodžius",
     weight: 3,
     judge: (tekstas) => {
-      const words = tekstas
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .trim()
-        .split(/\s+/);
+      const words = tokenize(tekstas);
       if (!words.length) return 0;
       const singleCharRatio =
         words.filter((w) => w.length === 1).length / words.length;
@@ -175,17 +175,13 @@ const kriterijai = [
       "Baudžia tekstus, kuriuose žodžių viduje pasitaiko didžiųjų raidžių",
     weight: 1.5,
     judge: (tekstas) => {
-      const words = tekstas
-        .replace(/[^\p{L}\p{N}]+/gu, " ")
-        .trim()
-        .split(/\s+/)
-        .filter((w) => w.length > 2);
+      const words = tokenize(tekstas).filter((w) => w.length > 2);
       if (words.length === 0) return 1;
 
       let badCount = 0;
       for (const w of words) {
         const middle = w.slice(1, -1);
-        if (/[A-ZĄČĘĖĮŠŲŪŽ]/.test(middle)) badCount++;
+        if (RE_INNER_UPPER.test(middle)) badCount++;
       }
 
       const percent = (badCount / words.length) * 100;
@@ -205,23 +201,21 @@ const kriterijai = [
     weight: 5,
     judge: (tekstas) => {
       const words = tekstas
-        .replace(/[^\p{L}\p{N}\-–—]+/gu, " ")
+        .replace(RE_NON_WORD_DASH, " ")
         .trim()
-        .split(/\s+/)
+        .split(RE_WHITESPACE)
         .filter((w) => w.length > 2);
       if (words.length === 0) return 1;
 
       let badCount = 0;
       for (const w of words) {
-        // leidžiami atvejai:
-        if (/^\d+$/.test(w)) continue; // visas skaičius
-        if (/-|–|—/.test(w)) continue; // turi brūkšnį
-        const digits = (w.match(/\d/g) || []).length;
+        if (RE_ALL_DIGITS.test(w)) continue; // visas skaičius
+        if (RE_DASH.test(w)) continue; // turi brūkšnį
+        const digits = (w.match(RE_DIGIT_GLOBAL) || []).length;
         if (digits >= 3) continue; // turi bent 3 skaičius
 
-        // blogas atvejis: skaičius viduryje
         const middle = w.slice(1, -1);
-        if (/\d/.test(middle)) badCount++;
+        if (RE_DIGIT.test(middle)) badCount++;
       }
 
       const percent = (badCount / words.length) * 100;

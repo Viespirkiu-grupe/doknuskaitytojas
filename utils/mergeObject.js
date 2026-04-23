@@ -1,4 +1,5 @@
 export function deepMerge(target, source, _visited = new WeakSet()) {
+  if (!source || typeof source !== "object") return target;
   if (_visited.has(source)) return target;
   _visited.add(source);
   for (const key of Object.keys(source)) {
