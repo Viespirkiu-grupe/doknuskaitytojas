@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { convertToPdf } from "../utils/libreoffice.js";
 import { log } from "../utils/log.js";
 import iconv from "iconv-lite";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 const TMP_DIR = path.resolve("./tmp");
 await fs.mkdir(TMP_DIR, { recursive: true });
@@ -72,9 +73,7 @@ function parseRtfMetadata(buffer) {
 
 export async function extractRtfContent(url) {
   log(url);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
-  const buffer = Buffer.from(await res.arrayBuffer());
+  const buffer = Buffer.from(await fetchSafe(url));
 
   const rtfMetadata = parseRtfMetadata(buffer);
 

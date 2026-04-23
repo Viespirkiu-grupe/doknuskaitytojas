@@ -6,6 +6,9 @@ import AdmZip from "adm-zip";
 import { parseStringPromise } from "xml2js";
 import { log } from "../utils/log.js";
 import { convertToPdf } from "../utils/libreoffice.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
+
+const stripDoctype = (xml) => xml.replace(/<!DOCTYPE\b[\s\S]*?(?:\[[\s\S]*?])?\s*>/i, "");
 
 const TMP_DIR = path.resolve("./tmp");
 try {
@@ -34,10 +37,7 @@ export async function convertXlsxToPdfBuffer(xlsxPath) {
  */
 export async function extractXlsxContent(url) {
   // 1. Download XLSX
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-  const arrayBuffer = await res.arrayBuffer();
-  const xlsxBuffer = Buffer.from(arrayBuffer);
+  const xlsxBuffer = Buffer.from(await fetchSafe(url));
 
   const tmpXlsx = path.join(TMP_DIR, `${randomUUID()}.xlsx`);
   await fs.writeFile(tmpXlsx, xlsxBuffer);
@@ -71,7 +71,7 @@ export async function extractXlsxMetadata(xlsxPath) {
   // 1. Core properties
   const coreXml = zip.readAsText("docProps/core.xml");
   if (coreXml) {
-    const parsed = await parseStringPromise(coreXml);
+    const parsed = await parseStringPromise(stripDoctype(coreXml));
     const props = parsed["cp:coreProperties"] || {};
     for (const key in props) {
       if (Array.isArray(props[key]) && props[key][0]) {
@@ -83,7 +83,7 @@ export async function extractXlsxMetadata(xlsxPath) {
   // 2. Extended properties
   const appXml = zip.readAsText("docProps/app.xml");
   if (appXml) {
-    const parsed = await parseStringPromise(appXml);
+    const parsed = await parseStringPromise(stripDoctype(appXml));
     const props = parsed.Properties || {};
     for (const key in props) {
       if (Array.isArray(props[key]) && props[key][0]) {
@@ -97,7 +97,7 @@ export async function extractXlsxMetadata(xlsxPath) {
   // 3. Custom properties
   const customXml = zip.readAsText("docProps/custom.xml");
   if (customXml) {
-    const parsed = await parseStringPromise(customXml);
+    const parsed = await parseStringPromise(stripDoctype(customXml));
     const props = parsed.Properties?.property || [];
     for (const p of props) {
       if (p?.$.name && p?.vt?.[0]) {

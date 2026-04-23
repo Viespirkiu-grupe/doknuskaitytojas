@@ -1,5 +1,6 @@
 import SevenZip from "7z-wasm";
 import { readDir, flattenFiles } from "./wasm.js";
+import { fetchSafe } from "../../utils/fetchSafe.js";
 
 /**
  * Extract the file listing from a 7z archive.
@@ -19,9 +20,9 @@ import { readDir, flattenFiles } from "./wasm.js";
 export async function extract7zContent(url) {
   const sevenZip = await SevenZip();
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-  const archiveBuffer = new Uint8Array(await res.arrayBuffer());
+  const archiveBuffer = new Uint8Array(await fetchSafe(url));
+  if (archiveBuffer.byteLength > 1_000_000_000)
+    throw new Error(`7z archive too large: ${archiveBuffer.byteLength} bytes (limit 1 GB)`);
 
   const archiveName = "/archive.7z";
   const extractDir  = "/extracted";

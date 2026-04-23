@@ -3,6 +3,7 @@ import path from "path";
 import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import { convertToPdf } from "../utils/libreoffice.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 const TMP_DIR = path.resolve("./tmp");
 await fs.mkdir(TMP_DIR, { recursive: true });
@@ -18,9 +19,7 @@ async function convertOdgToPdfBuffer(odgPath) {
 }
 
 export async function extractOdgContent(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-  const buffer = Buffer.from(await res.arrayBuffer());
+  const buffer = Buffer.from(await fetchSafe(url));
 
   const tmpOdg = path.join(TMP_DIR, `${randomUUID()}.odg`);
   await fs.writeFile(tmpOdg, buffer);

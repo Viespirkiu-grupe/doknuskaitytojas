@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import { log } from "../utils/log.js";
 import { gautiViskaIsTeksto } from "../parsers/viskas.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
@@ -372,9 +373,7 @@ export async function extractExeContent(url) {
   const tmpFile = path.join(TMP_DIR, `${randomUUID()}.exe`);
   try {
     log(url);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
-    const buf = Buffer.from(await res.arrayBuffer());
+    const buf = Buffer.from(await fetchSafe(url));
     fs.writeFileSync(tmpFile, buf);
 
     const peData = parsePe(buf);

@@ -1,5 +1,8 @@
 import path from "path";
 import crypto from "crypto";
+import { AsyncLocalStorage } from "async_hooks";
+
+export const requestContext = new AsyncLocalStorage();
 
 /**
  * Generate a pastel color based on a seed string.
@@ -71,7 +74,7 @@ function getCallerFile() {
  * @param {string} text - The message to log.
  * @param {object} options - Additional options (currently unused).
  */
-export function log(text, options = {}) {
+export function log(...args) {
   const time = new Date().toLocaleTimeString("lt-LT", {
     hour12: false,
     hour: "2-digit",
@@ -84,5 +87,8 @@ export function log(text, options = {}) {
   const reset = "\x1b[0m";
   const gray = "\x1b[90m";
 
-  console.log(`${gray}[${time}]${reset} ${color}[${caller}]${reset} ${text}`);
+  const reqId = requestContext.getStore();
+  const idPart = reqId ? ` ${gray}[${reqId}]${reset}` : "";
+
+  console.log(`${gray}[${time}]${reset} ${color}[${caller}]${reset}${idPart}`, ...args);
 }

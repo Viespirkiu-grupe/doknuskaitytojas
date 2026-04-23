@@ -1,6 +1,7 @@
 import ExifReader from "exifreader";
 import { log } from "../utils/log.js";
 import { gautiViskaIsTeksto } from "../parsers/viskas.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -361,9 +362,7 @@ export async function extractImageContent(input, options = {}) {
   } else if (input instanceof Uint8Array) {
     arrayBuffer = input.buffer;
   } else {
-    const res = await fetch(input);
-    if (!res.ok) throw new Error(`Failed to fetch ${input}: ${res.statusText}`);
-    arrayBuffer = await res.arrayBuffer();
+    arrayBuffer = await fetchSafe(input);
   }
   log(`1. Fetch image took ${((new Date() - start) / 1000).toFixed(3)}s`);
 

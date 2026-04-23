@@ -3,6 +3,7 @@ import { deepMerge } from "../utils/mergeObject.js";
 import emlformat from "eml-format";
 import { parseHTML } from "linkedom";
 import { decodeRfc2047 } from "../utils/decodeRfc2047.js";
+import { fetchSafeText } from "../utils/fetchSafe.js";
 
 /**
  * @typedef {{ name?: string, email: string }} EmailAddress
@@ -91,10 +92,7 @@ function formatAddress(addr) {
  * }>}
  */
 export async function extractEmlContent(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-
-  const eml = await res.text();
+  const eml = await fetchSafeText(url);
   if (eml.trim() === "") throw new Error("Empty EML content");
 
   const msgInfo = await new Promise((resolve, reject) => {

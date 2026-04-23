@@ -23,7 +23,8 @@ import path from "path";
  * @param {string} extractDir - Root extraction path, used to compute relative paths
  * @returns {ArchiveFile[]}
  */
-export function readDir(fs, dir, extractDir) {
+export function readDir(fs, dir, extractDir, depth = 0) {
+  if (depth > 100) return [];
   return fs
     .readdir(dir)
     .filter((e) => e !== "." && e !== "..")
@@ -45,7 +46,7 @@ export function readDir(fs, dir, extractDir) {
         lastModDate: new Date(stats.mtime),
         isDirectory,
         md5,
-        children: isDirectory ? readDir(fs, fullPath, extractDir) : undefined,
+        children: isDirectory ? readDir(fs, fullPath, extractDir, depth + 1) : undefined,
       };
     });
 }

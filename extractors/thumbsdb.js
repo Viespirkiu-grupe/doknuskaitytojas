@@ -1,5 +1,6 @@
 import CFB from "cfb";
 import { log } from "../utils/log.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 /**
  * @typedef {Object} ThumbsdbFile
@@ -54,9 +55,7 @@ function jpegDimensions(buf) {
 export async function extractThumbsdbContent(url) {
   let start = new Date();
 
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-  const buffer = Buffer.from(await res.arrayBuffer());
+  const buffer = Buffer.from(await fetchSafe(url));
 
   log(`1. Fetch took ${((new Date() - start) / 1000).toFixed(3)}s`);
   start = new Date();

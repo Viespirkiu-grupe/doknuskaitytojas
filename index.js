@@ -2,7 +2,9 @@ import express from "express";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
-import { log } from "./utils/log.js";
+import { log, requestContext } from "./utils/log.js";
+import pLimit from "p-limit";
+import { randomUUID } from "crypto";
 
 dotenv.config({ quiet: true });
 
@@ -30,6 +32,11 @@ const MIME_TO_EXT = Object.fromEntries(
 
 const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
+for (const f of fs.readdirSync(TMP_DIR)) {
+  fs.rmSync(path.join(TMP_DIR, f), { recursive: true, force: true });
+}
+
+const limit = pLimit(Number(process.env.MAX_CONCURRENT) || 4);
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
@@ -37,7 +44,20 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 process.env.LIBREOFFICE_TIMEOUT = String(process.env.LIBREOFFICE_TIMEOUT || 15);
 
-const version = 9;
+const version = 10;
+
+process.on("unhandledRejection", (err) => {
+  log("Unhandled rejection:", err);
+});
+
+function requireAuth(req, res, next) {
+  if (!API_KEY) return next();
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer ") || auth.slice(7) !== API_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
 
 const HOISTED_FIELDS = [
   "companyIds", "ibans", "phones", "links", "emails",
@@ -62,84 +82,66 @@ app.get("/healthz", (req, res) => {
   res.status(200).send("OK");
 });
 
-// GET /?url=...&apiKey=...&extension=pdf||docx
-app.get("/", async (req, res) => {
-  const { url, apiKey } = req.query;
+function resolveExt(extension, mime) {
+  if (extension) return extension.toLowerCase();
+  if (mime) return MIME_TO_EXT[mime] ?? mime;
+  return "pdf";
+}
 
-  if (!url) {
-    return res.status(400).json({ error: "Missing url parameter" });
-  }
+// GET /?url=...&extension=pdf  (Authorization: Bearer <token>)
+app.get("/", requireAuth, async (req, res) => {
+  const { url } = req.query;
+  if (!url) return res.status(400).json({ success: false, error: "Missing url parameter" });
 
-  log(url);
-
-  if (API_KEY && apiKey !== API_KEY) {
-    return res.status(403).json({ error: "Invalid API key" });
-  }
-
-  const extension = (req.query.extension
-    ? req.query.extension.toLowerCase()
-    : req.query.mime
-      ? (MIME_TO_EXT[req.query.mime] ?? req.query.mime)
-      : "pdf");
+  const reqId = randomUUID().slice(0, 8);
+  const extension = resolveExt(req.query.extension, req.query.mime);
 
   if (!extractors[extension]) {
     return res.status(400).json({
-      error:
-        "Invalid extension/mime parameter, should be one of: " +
-        Object.keys(extractors).join(", "),
+      success: false,
+      error: "Invalid extension/mime, must be one of: " + Object.keys(extractors).join(", "),
     });
   }
 
-  try {
-    const result = await extractors[extension](url);
-    res.json({ success: true, result: annotateResult(result, extension), version });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-    log(`Error processing ${url}:`);
-    console.error(err);
-  }
+  await requestContext.run(reqId, async () => {
+    log(url);
+    try {
+      const result = await limit(() => extractors[extension](url));
+      res.json({ success: true, result: annotateResult(result, extension), version });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+      log(`Error processing ${url}:`, err);
+    }
+  });
 });
 
-// POST /extract
-// Body: { url: "...", apiKey: "...", extension: "pdf" || "docx" }
-app.post("/extract", async (req, res) => {
-  const { url, apiKey, extension, mime, puslapiai = [] } = req.body;
+// POST /extract  (Authorization: Bearer <token>)
+// Body: { url, extension?, mime?, puslapiai? }
+app.post("/extract", requireAuth, async (req, res) => {
+  const { url, extension, mime, puslapiai = [] } = req.body;
 
-  if (!url) {
-    return res.status(400).json({ error: "Missing url parameter" });
-  }
+  if (!url) return res.status(400).json({ success: false, error: "Missing url" });
 
-  log(url);
-
-  if (API_KEY && apiKey !== API_KEY) {
-    return res.status(403).json({ error: "Invalid API key" });
-  }
-
-  const ext = extension
-    ? extension.toLowerCase()
-    : mime
-      ? (MIME_TO_EXT[mime] ?? mime)
-      : "pdf";
+  const reqId = randomUUID().slice(0, 8);
+  const ext = resolveExt(extension, mime);
 
   if (!extractors[ext]) {
     return res.status(400).json({
-      error:
-        "Invalid extension/mime parameter, should be one of: " +
-        Object.keys(extractors).join(", "),
+      success: false,
+      error: "Invalid extension/mime, must be one of: " + Object.keys(extractors).join(", "),
     });
   }
 
-  try {
-    const options = {
-      puslapiai,
-    };
-    const result = await extractors[ext](url, options);
-    res.json({ success: true, result: annotateResult(result, ext), version });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-    log(`Error processing ${url}:`);
-    console.error(err);
-  }
+  await requestContext.run(reqId, async () => {
+    log(url);
+    try {
+      const result = await limit(() => extractors[ext](url, { puslapiai }));
+      res.json({ success: true, result: annotateResult(result, ext), version });
+    } catch (err) {
+      res.status(500).json({ success: false, error: err.message });
+      log(`Error processing ${url}:`, err);
+    }
+  });
 });
 
 app.listen(PORT, () => {

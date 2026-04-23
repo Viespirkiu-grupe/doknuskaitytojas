@@ -2,6 +2,8 @@ import yauzl from "yauzl";
 import crypto from "crypto";
 import path from "path";
 import { detectEncoding } from "../../utils/detectEncoding.js";
+import { fetchSafe } from "../../utils/fetchSafe.js";
+import { log } from "../../utils/log.js";
 
 /**
  * @typedef {Object} ArchiveFile
@@ -60,10 +62,11 @@ function buildTree(files) {
  *   metadata: { files: ArchiveFile[], filesTree: ArchiveFile[] }
  * }>}
  */
+const MAX_ENTRY_BYTES = 1_000_000_000; // 1 GB per entry
+const MAX_TOTAL_BYTES = 2_000_000_000; // 2 GB cumulative uncompressed
+
 export async function extractZipContent(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-  const buffer = Buffer.from(await res.arrayBuffer());
+  const buffer = Buffer.from(await fetchSafe(url));
 
   return new Promise((resolve, reject) => {
     yauzl.fromBuffer(
@@ -73,6 +76,7 @@ export async function extractZipContent(url) {
         if (err) return reject(err);
 
         const files = [];
+        let totalUncompressed = 0;
 
         zipfile.readEntry();
         zipfile.on("entry", (entry) => {
@@ -81,6 +85,19 @@ export async function extractZipContent(url) {
           const extension   = isDirectory
             ? null
             : path.extname(fileName).slice(1).toLowerCase();
+
+          if (!isDirectory) {
+            if (entry.uncompressedSize > MAX_ENTRY_BYTES) {
+              log(`ZIP: skipping oversized entry ${fileName} (${entry.uncompressedSize} bytes)`);
+              zipfile.readEntry();
+              return;
+            }
+            totalUncompressed += entry.uncompressedSize;
+            if (totalUncompressed > MAX_TOTAL_BYTES) {
+              zipfile.close();
+              return reject(new Error(`ZIP total uncompressed size exceeds ${MAX_TOTAL_BYTES} bytes`));
+            }
+          }
 
           const pushEntry = (md5 = null) => {
             files.push({

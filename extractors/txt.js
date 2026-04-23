@@ -1,5 +1,6 @@
 import { gautiViskaIsTeksto } from "../parsers/viskas.js";
 import { detectEncoding }    from "../utils/detectEncoding.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 /**
  * Extract text and metadata from a plain-text file.
@@ -23,10 +24,7 @@ import { detectEncoding }    from "../utils/detectEncoding.js";
  * }>}
  */
 export async function extractTxtContent(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-
-  const buf = Buffer.from(await res.arrayBuffer());
+  const buf = Buffer.from(await fetchSafe(url));
   const { encoding, text: rawText } = detectEncoding(buf);
 
   const text = rawText.replace(/\r\n/g, "\n");

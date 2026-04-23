@@ -2,6 +2,7 @@ import { gautiViskaIsTeksto } from "../parsers/viskas.js";
 import MsgReader from "@kenjiuno/msgreader";
 import { parseHTML } from "linkedom";
 import { parseHeaders } from "../utils/parseHeaders.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 /**
  * @typedef {{ name: string, email: string }} EmailAddress
@@ -88,9 +89,7 @@ function formatAddress(addr) {
  * }>}
  */
 export async function extractMsgContent(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-  const buffer = Buffer.from(await res.arrayBuffer());
+  const buffer = Buffer.from(await fetchSafe(url));
 
   const msgInfo = new MsgReader.default(buffer).getFileData();
 

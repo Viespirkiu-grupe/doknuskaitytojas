@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import path from "path";
 import { log } from "../utils/log.js";
 import { gautiViskaIsTeksto } from "../parsers/viskas.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 const execFileAsync = promisify(execFile);
 const TMP_DIR = path.resolve("./tmp");
@@ -165,9 +166,7 @@ export async function extractMediaContent(url) {
   const tmpFile = path.join(TMP_DIR, `${randomUUID()}.media`);
   try {
     log(url);
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${url}`);
-    const buf = Buffer.from(await res.arrayBuffer());
+    const buf = Buffer.from(await fetchSafe(url));
     fs.writeFileSync(tmpFile, buf);
 
     const probe = await runFfprobe(tmpFile);

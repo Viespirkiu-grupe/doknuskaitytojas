@@ -7,6 +7,7 @@ import path from "path";
 import { log } from "../utils/log.js";
 import { gautiViskaIsTeksto } from "../parsers/viskas.js";
 import { nustatytiKokybiskesniTeksta } from "../utils/nustatytiKokybiskesniTeksta.js";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 const TMP_DIR = path.resolve("./tmp");
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
@@ -391,9 +392,7 @@ export async function extractPdfContent(input, options = {}) {
   if (Buffer.isBuffer(input)) {
     buffer = input;
   } else {
-    const res = await fetch(input);
-    if (!res.ok) throw new Error(`Failed to fetch ${input}: ${res.statusText}`);
-    buffer = Buffer.from(await res.arrayBuffer());
+    buffer = Buffer.from(await fetchSafe(input));
   }
   log(`1. Fetchpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
 
@@ -408,7 +407,7 @@ export async function extractPdfContent(input, options = {}) {
     } catch {
       // pdfsig may not be installed or the PDF may have no signatures
     } finally {
-      fs.unlinkSync(tmpFile);
+      try { fs.unlinkSync(tmpFile); } catch {}
     }
   }
   log(`2. Signpdf took ${((new Date() - start) / 1000).toFixed(3)}s`);
@@ -423,6 +422,10 @@ export async function extractPdfContent(input, options = {}) {
   const allRedactions  = [];
 
   const skipPdfSpecific = options.skipPdfMetadata === true;
+
+  const MAX_PAGES = Number(process.env.PDF_MAX_PAGES) || 10_000;
+  if (pdf.numPages > MAX_PAGES)
+    throw new Error(`PDF has too many pages: ${pdf.numPages} (limit ${MAX_PAGES})`);
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page    = await pdf.getPage(i);

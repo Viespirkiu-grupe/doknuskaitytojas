@@ -2,6 +2,7 @@ import yauzl from "yauzl";
 import { XMLParser } from "fast-xml-parser";
 import path from "path";
 import crypto, { X509Certificate } from "crypto";
+import { fetchSafe } from "../utils/fetchSafe.js";
 
 const xmlParser = new XMLParser({
   ignoreAttributes: false,
@@ -10,6 +11,7 @@ const xmlParser = new XMLParser({
   parseAttributeValue: false,
   parseTagValue: false,       // keep all element text as strings (prevents e.g. codes parsing as integers)
   allowBooleanAttributes: true,
+  processEntities: false,     // prevent billion-laughs entity expansion attacks
 });
 
 const REL = "http://www.archyvai.lt/adoc/2008/relationships";
@@ -350,9 +352,7 @@ function buildTree(files) {
 // ── Main extractor ─────────────────────────────────────────────────────────
 
 export async function extractAdocContent(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.statusText}`);
-  const buffer = Buffer.from(await res.arrayBuffer());
+  const buffer = Buffer.from(await fetchSafe(url));
 
   const entries = await readAllEntries(buffer);
 
