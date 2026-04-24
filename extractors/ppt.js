@@ -4,6 +4,7 @@ import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import { convertToPdf } from "../utils/libreoffice.js";
 import { fetchSafe } from "../utils/fetchSafe.js";
+import { log } from "../utils/log.js";
 
 const TMP_DIR = path.resolve("./tmp");
 await fs.mkdir(TMP_DIR, { recursive: true });
@@ -28,13 +29,8 @@ export async function extractPptContent(url) {
     // Convert PPT → PDF
     let t = Date.now();
     const pdfBuffer = await convertPptToPdfBuffer(tmpPpt);
-    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
-
-    // Extract PDF content & metadata
-    const result = await extractPdfContent(pdfBuffer, {
-      skipPdfMetadata: true,
-    });
-
+    const result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
+    log(`${((Date.now() - t) / 1000).toFixed(2)}s`);
     return result;
   } finally {
     await fs.unlink(tmpPpt).catch(() => {});

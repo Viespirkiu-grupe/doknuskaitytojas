@@ -6,7 +6,10 @@ RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/80-retries && \
     echo 'Acquire::http::Timeout "30";' >> /etc/apt/apt.conf.d/80-retries
 
 RUN apt-get update && \
-    apt-get install --no-install-recommends -y poppler-utils tini libnss3 libnss3-tools ca-certificates ffmpeg && \
+    apt-get install --no-install-recommends -y \
+      poppler-utils tini libnss3 libnss3-tools ca-certificates ffmpeg \
+      libreoffice python3 python3-pip && \
+    pip3 install --break-system-packages unoserver && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 

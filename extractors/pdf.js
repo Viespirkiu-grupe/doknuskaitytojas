@@ -386,6 +386,7 @@ async function findSloppyRedactions(pdfPage, pageNumber, tolerance, textContent)
  * @returns {Promise<{ pages: string[], metadata: object }>}
  */
 export async function extractPdfContent(input, options = {}) {
+  const t0 = Date.now();
   let buffer;
   if (Buffer.isBuffer(input)) {
     buffer = input;
@@ -406,7 +407,6 @@ export async function extractPdfContent(input, options = {}) {
     } finally {
       try { fs.unlinkSync(tmpFile); } catch {}
     }
-    log(`Parašai: ${((Date.now() - t) / 1000).toFixed(2)}s`);
   }
 
   // Extract page text, links, and annotations via pdfjs-dist
@@ -459,7 +459,6 @@ export async function extractPdfContent(input, options = {}) {
       allRedactions.push(...pageFindings);
     }
   }
-  log(`Puslapiai: ${((Date.now() - start) / 1000).toFixed(2)}s`);
 
   // Build metadata from PDF info dict
   let metadata;
@@ -520,7 +519,9 @@ export async function extractPdfContent(input, options = {}) {
     }
   }
 
-  return { pages, metadata: cleanMetadata(metadata) };
+  const result = { pages, metadata: cleanMetadata(metadata) };
+  if (!options.skipPdfMetadata) log(`PDF: ${((Date.now() - t0) / 1000).toFixed(2)}s`);
+  return result;
 }
 
 export const fileTypes = [

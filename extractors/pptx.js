@@ -45,16 +45,10 @@ export async function extractPptxContent(url) {
   try {
     let t = Date.now();
     const pdfBuffer = await convertPptxToPdfBuffer(tmpPptx);
-    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
-
-    // Extract PPTX metadata
     const metadata = await extractPptxMetadata(tmpPptx);
-
-    // Run PDF extractor
     let result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
-
+    log(`${((Date.now() - t) / 1000).toFixed(2)}s`);
     result.metadata = { ...result.metadata, ...metadata };
-
     return result;
   } finally {
     await fs.unlink(tmpPptx).catch(() => {});

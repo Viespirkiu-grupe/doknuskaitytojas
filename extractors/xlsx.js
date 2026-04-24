@@ -45,16 +45,10 @@ export async function extractXlsxContent(url) {
   try {
     let t = Date.now();
     const pdfBuffer = await convertXlsxToPdfBuffer(tmpXlsx);
-    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
-
-    // Extract XLSX metadata
     const metadata = await extractXlsxMetadata(tmpXlsx);
-
-    // Run PDF extractor
     let result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
-
+    log(`${((Date.now() - t) / 1000).toFixed(2)}s`);
     result.metadata = { ...result.metadata, ...metadata };
-
     return result;
   } finally {
     await fs.unlink(tmpXlsx).catch(() => {});

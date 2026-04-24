@@ -3,7 +3,7 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "test": "node --env-file=.env --test test/*.test.js test/**/*.test.js"
+        "test": "node --test test/*.test.js test/**/*.test.js"
     },
     "author": "",
     "license": "ISC",

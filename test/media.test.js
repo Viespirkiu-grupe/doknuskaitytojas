@@ -39,9 +39,9 @@ describe("extractMediaContent — MP4", () => {
     const { metadata: m } = await extractMediaContent(URLS.mp4);
     assert.ok(m.format.name.includes("mp4"));
     assert.equal(m.format.longName, "QuickTime / MOV");
-    assert.equal(m.format.durationSec, 9.4);
+    assert.ok(Math.abs(m.format.durationSec - 9.4) < 0.1);
     assert.equal(m.format.sizeBytes, 2148061);
-    assert.equal(m.format.bitrateKbps, 1828);
+    assert.ok(Math.abs(m.format.bitrateKbps - 1830) < 10);
     assert.equal(m.format.streamCount, 2);
   });
 

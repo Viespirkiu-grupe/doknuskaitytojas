@@ -1,16 +1,4 @@
 services:
-  unoserver:
-    image: libreofficedocker/libreoffice-unoserver:3.21
-    container_name: viesunoserver
-    restart: unless-stopped
-    ports:
-      - "2004:2004"
-    logging:
-      driver: "json-file"
-      options:
-        max-file: "5"
-        max-size: "10m"
-
   viesdoknuskaitytojas:
     build: .
     image: viesdoknuskaitytojas
@@ -18,12 +6,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    environment:
-      - UNOSERVER_HOST=unoserver
     ports:
       - "${PORT:-3000}:${PORT:-3000}"
-    depends_on:
-      - unoserver
     logging:
       driver: "json-file"
       options:

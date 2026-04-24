@@ -38,13 +38,8 @@ export async function extractDocContent(url) {
   try {
     let t = Date.now();
     const pdfBuffer = await convertDocToPdfBuffer(tmpDoc);
-    log(`LibreOffice: ${((Date.now() - t) / 1000).toFixed(2)}s`);
-
-    // Extract PDF content & metadata
-    const result = await extractPdfContent(pdfBuffer, {
-      skipPdfMetadata: true,
-    });
-
+    const result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
+    log(`${((Date.now() - t) / 1000).toFixed(2)}s`);
     return result;
   } finally {
     await fs.unlink(tmpDoc).catch(() => {});

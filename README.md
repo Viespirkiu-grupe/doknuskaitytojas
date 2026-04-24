@@ -85,6 +85,8 @@ To rebuild after code changes: `docker compose up -d --build`
 
 Temporary files are written to `./tmp/` and automatically cleaned up: extractors remove their own files after use, and a background job removes any files older than 1 hour.
 
+`unoserver` (LibreOffice conversion server) runs inside the same container as a child process. If a conversion times out, unoserver is automatically killed and restarted — no separate container needed.
+
 ## Get in touch
 
 Exposing the service over the public internet is beyond the scope of this document, but do [reach out](https://viespirkiai.top/kontaktai) if you want to contribute a node and need help.
