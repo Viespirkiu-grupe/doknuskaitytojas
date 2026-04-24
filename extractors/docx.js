@@ -120,9 +120,9 @@ export async function extractDocxMetadata(docxPath) {
   metadata.Title = metadata.title || "";
   delete metadata.title;
   delete metadata.HLinks;
-  metadata.characterCount = metadata.Characters || 0;
+  if (metadata.Characters) metadata.characterCount = metadata.Characters;
   delete metadata.Characters;
-  metadata.wordCount = metadata.Words || 0;
+  if (metadata.Words) metadata.wordCount = metadata.Words;
   delete metadata.Words;
   delete metadata.Pages;
   metadata.paragraphCount = metadata.Paragraphs || 0;
