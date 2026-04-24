@@ -4,6 +4,7 @@ import { extractPdfContent } from "./pdf.js";
 import { randomUUID } from "crypto";
 import { convertToPdf } from "../utils/libreoffice.js";
 import { fetchSafe } from "../utils/fetchSafe.js";
+import { log } from "../utils/log.js";
 
 const TMP_DIR = path.resolve("./tmp");
 await fs.mkdir(TMP_DIR, { recursive: true });
