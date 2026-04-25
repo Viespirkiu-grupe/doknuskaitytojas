@@ -4,6 +4,7 @@
 # Except for the following
 !.gitignore
 !.dockerignore
+!.github
 
 # Also ignore the following
 data
