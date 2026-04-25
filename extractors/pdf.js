@@ -462,7 +462,7 @@ export async function extractPdfContent(input, options = {}) {
   }
 
   // Build metadata from PDF info dict
-  const DOC_PROP_KEYS = new Set(["title", "author", "subject", "keywords", "creator", "createdAt", "modifiedAt", "producer"]);
+  const DOC_PROP_KEYS = new Set(["title", "author", "subject", "keywords"]);
   let metadata;
   if (!options.skipPdfMetadata) {
     const KEY_MAP = {

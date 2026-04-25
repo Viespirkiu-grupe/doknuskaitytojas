@@ -71,7 +71,7 @@ const PORT = process.env.PORT || 3000;
 const API_KEY = process.env.API_KEY;
 process.env.LIBREOFFICE_TIMEOUT = String(process.env.LIBREOFFICE_TIMEOUT || 15);
 
-const version = 11;
+const version = 12;
 
 process.on("unhandledRejection", (err) => {
   log("Unhandled rejection:", err);
