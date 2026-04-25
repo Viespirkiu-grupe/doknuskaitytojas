@@ -29,7 +29,7 @@ export async function extractPptContent(url) {
     // Convert PPT → PDF
     let t = Date.now();
     const pdfBuffer = await convertPptToPdfBuffer(tmpPpt);
-    const result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
+    const result = await extractPdfContent(pdfBuffer, { docPropsOnly: true });
     log(`${((Date.now() - t) / 1000).toFixed(2)}s`);
     return result;
   } finally {

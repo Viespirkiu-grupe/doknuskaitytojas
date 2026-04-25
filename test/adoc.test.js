@@ -6,6 +6,8 @@ import { extractAdocContent } from "../extractors/adoc.js";
 const CONTRACT_WITH_ANNEX = "https://failai.viespirkiai.org/1001450";
 // Contract signed by one legal entity, 4 signatures (two with personal-ID certs), one docx annex
 const CONTRACT_MULTI_SIG  = "https://failai.viespirkiai.org/1004117";
+// Telia contract — individual + legal-entity authors, two signatures, single PDF main doc
+const TELIA_CONTRACT      = "https://failai.viespirkiai.org/90373088";
 
 // ── CONTRACT_WITH_ANNEX ────────────────────────────────────────────────────
 
@@ -205,5 +207,77 @@ describe("extractAdocContent — contract with four signatures (1004117)", () =>
   it("pages array is empty (no text extraction for ADOC)", async () => {
     const { pages } = await extractAdocContent(CONTRACT_MULTI_SIG);
     assert.deepEqual(pages, []);
+  });
+});
+
+// ── TELIA_CONTRACT ─────────────────────────────────────────────────────────
+
+describe("extractAdocContent — Telia contract with individual + org authors (90373088)", () => {
+  it("returns expected container fields", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    assert.equal(m.containerType,    "ADOC");
+    assert.equal(m.standardVersion,  "ADOC-V1.0");
+    assert.equal(m.documentCategory, "CeDOC");
+  });
+
+  it("returns title", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    assert.equal(m.title, "Telia sutartis");
+  });
+
+  it("returns one individual and one legal-entity author", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    assert.equal(m.authors.length, 2);
+    const individual = m.authors.find((a) => a.individual === true);
+    const org        = m.authors.find((a) => a.individual === false);
+    assert.equal(individual.name, "Asta Strazdienė");
+    assert.equal(individual.code, "47006260809");
+    assert.equal(org.name,        "Vilkaviškio  pradinė mokykla");
+    assert.equal(org.code,        "302430352");
+  });
+
+  it("returns no registrations and no receptions", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    assert.equal(m.registrations.length, 0);
+    assert.equal(m.receptions.length,    0);
+  });
+
+  it("returns main document as PDF with no annexes or attachments", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    assert.equal(m.mainDocument.extension ?? m.mainDocument.path.split(".").pop(), "pdf");
+    assert.equal(m.annexes.length,     0);
+    assert.equal(m.attachments.length, 0);
+  });
+
+  it("returns two signatures with correct purposes and levels", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    assert.equal(m.signatures.length, 2);
+    assert.ok(m.signatures.every((s) => s.signingPurpose === "signature"));
+    const [s0, s1] = m.signatures;
+    assert.equal(s0.level, "XAdES-EPES");
+    assert.equal(s1.level, "XAdES-T");
+  });
+
+  it("second signature has a Lithuanian personal-ID cert", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    const s1 = m.signatures[1];
+    assert.equal(s1.hasPersonalId,  true);
+    assert.equal(s1.signerCountry,  "LT");
+    assert.equal(s1.hashAlgorithm,  "SHA-256");
+  });
+
+  it("files list contains only the PDF main document (no META-INF or metadata entries)", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    assert.equal(m.files.length, 1);
+    assert.equal(m.files[0].extension, "pdf");
+    assert.ok(!m.files.some((f) => f.path.startsWith("META-INF/")));
+    assert.ok(!m.files.some((f) => f.path.startsWith("metadata/")));
+    assert.ok(m.files.every((f) => typeof f.md5 === "string" && /^[0-9a-f]{32}$/.test(f.md5)));
+  });
+
+  it("filesTree contains only the PDF at the root level", async () => {
+    const { metadata: m } = await extractAdocContent(TELIA_CONTRACT);
+    assert.equal(m.filesTree.length, 1);
+    assert.equal(m.filesTree[0].extension, "pdf");
   });
 });

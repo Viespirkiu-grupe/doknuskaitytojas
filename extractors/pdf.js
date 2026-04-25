@@ -382,6 +382,7 @@ async function findSloppyRedactions(pdfPage, pageNumber, tolerance, textContent)
  * @param {{
  *   puslapiai?: string[],
  *   skipPdfMetadata?: boolean,
+ *   docPropsOnly?: boolean,
  * }} [options]
  * @returns {Promise<{ pages: string[], metadata: object }>}
  */
@@ -396,7 +397,7 @@ export async function extractPdfContent(input, options = {}) {
 
   // Extract digital signatures via pdfsig (poppler-utils) — skip for converted docs
   let signatureInfo = null;
-  if (!options.skipPdfMetadata) {
+  if (!options.skipPdfMetadata && !options.docPropsOnly) {
     const tmpFile = path.join(TMP_DIR, `${randomUUID()}.pdf`);
     const t = Date.now();
     try {
@@ -418,7 +419,7 @@ export async function extractPdfContent(input, options = {}) {
   const emailsMap      = new Map();
   const allRedactions  = [];
 
-  const skipPdfSpecific = options.skipPdfMetadata === true;
+  const skipPdfSpecific = options.skipPdfMetadata === true || options.docPropsOnly === true;
 
   const MAX_PAGES = Number(process.env.PDF_MAX_PAGES) || 10_000;
   if (pdf.numPages > MAX_PAGES)
@@ -461,6 +462,7 @@ export async function extractPdfContent(input, options = {}) {
   }
 
   // Build metadata from PDF info dict
+  const DOC_PROP_KEYS = new Set(["title", "author", "subject", "keywords", "creator", "createdAt", "modifiedAt", "producer"]);
   let metadata;
   if (!options.skipPdfMetadata) {
     const KEY_MAP = {
@@ -486,6 +488,7 @@ export async function extractPdfContent(input, options = {}) {
     metadata = {};
     for (const [raw, value] of Object.entries(meta.info)) {
       const key = KEY_MAP[raw] ?? raw[0].toLowerCase() + raw.slice(1);
+      if (options.docPropsOnly && !DOC_PROP_KEYS.has(key)) continue;
       const isDate = key === "createdAt" || key === "modifiedAt";
       metadata[key] = isDate ? (parsePdfDate(value) ?? value) : value;
     }
@@ -510,7 +513,7 @@ export async function extractPdfContent(input, options = {}) {
   metadata.links  = mergePagedItems("uri",   metadata.links,  annotLinks);
   metadata.emails = mergePagedItems("email", annotEmails,     metadata.emails);
 
-  if (!options.skipPdfMetadata) {
+  if (!options.skipPdfMetadata && !options.docPropsOnly) {
     if (allRedactions.length > 0) metadata.sloppyRedactions = allRedactions;
 
     if (signatureInfo) {

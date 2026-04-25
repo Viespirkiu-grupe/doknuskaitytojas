@@ -499,10 +499,17 @@ export async function extractAdocContent(url) {
     });
   }
 
-  // ── File listing ──
-  const allFiles = buildFileList(entries);
-  const flatFiles = allFiles.filter((f) => !f.isDirectory);
-  const filesTree = buildTree(allFiles);
+  // ── File listing — only content files (main doc, annexes, attachments) per spec roles ──
+  const contentPaths = new Set([
+    ...(mainDocument ? [mainDocument.path] : []),
+    ...annexes.map((a) => a.path),
+    ...attachments.map((a) => a.path),
+  ]);
+  const fileInfoMap = buildFileList(entries).reduce((m, f) => (m.set(f.path, f), m), new Map());
+  const flatFiles = [...contentPaths]
+    .map((p) => fileInfoMap.get(p))
+    .filter(Boolean);
+  const filesTree = buildTree(flatFiles);
 
   return {
     pages: [],

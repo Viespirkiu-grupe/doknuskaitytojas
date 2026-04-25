@@ -84,7 +84,7 @@ export async function extractRtfContent(url) {
     let t = Date.now();
     await convertToPdf(tmpRtf, pdfPath);
     const pdfBuffer = await fs.readFile(pdfPath);
-    const result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
+    const result = await extractPdfContent(pdfBuffer, { docPropsOnly: true });
     log(`${((Date.now() - t) / 1000).toFixed(2)}s`);
     Object.assign(result.metadata, rtfMetadata);
     return result;

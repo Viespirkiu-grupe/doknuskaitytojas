@@ -29,7 +29,7 @@ export async function extractOdgContent(url) {
     // Convert ODG → PDF
     let t = Date.now();
     const pdfBuffer = await convertOdgToPdfBuffer(tmpOdg);
-    const result = await extractPdfContent(pdfBuffer, { skipPdfMetadata: true });
+    const result = await extractPdfContent(pdfBuffer, { docPropsOnly: true });
     log(`${((Date.now() - t) / 1000).toFixed(2)}s`);
     return result;
   } finally {
