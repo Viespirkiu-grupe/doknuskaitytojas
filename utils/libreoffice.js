@@ -117,6 +117,10 @@ export async function convertToPdf(inputPath, outputPath) {
     const xml = await response.text();
     if (xml.includes("<fault>")) {
       const fault = xml.match(/<string>([\s\S]*?)<\/string>/)?.[1] ?? xml;
+      log("unoserver grąžino klaidą, paleidžiama iš naujo...");
+      if (!restartPromise) {
+        restartPromise = doRestart().finally(() => { restartPromise = null; });
+      }
       throw new Error(`unoserver klaida: ${fault.trim()}`);
     }
   } catch (err) {
