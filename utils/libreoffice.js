@@ -1,9 +1,16 @@
 import { spawn } from "child_process";
+import pLimit from "p-limit";
+import treeKill from "tree-kill";
 import { log } from "./log.js";
 
 const UNO_PORT     = parseInt(process.env.UNOSERVER_PORT ?? "2004", 10);
 const CONV_TIMEOUT = parseInt(process.env.LIBREOFFICE_TIMEOUT ?? "15", 10) * 1000;
 const UNO_URL      = `http://127.0.0.1:${UNO_PORT}/`;
+
+// Serialize LibreOffice conversions — unoserver spawns one LO process per
+// concurrent request, so running more than one at a time pegs the CPU.
+const MAX_CONCURRENT_LO = parseInt(process.env.MAX_CONCURRENT_LIBREOFFICE ?? "1", 10);
+const loLimit = pLimit(MAX_CONCURRENT_LO);
 
 let proc         = null;
 let restartPromise  = null;
@@ -41,8 +48,9 @@ function spawnUnoserver(onSpawnError) {
 
 async function doRestart() {
   if (proc) {
-    proc.kill("SIGKILL");
+    const pid = proc.pid;
     proc = null;
+    await new Promise(r => treeKill(pid, "SIGKILL", r));
   }
   await new Promise(r => setTimeout(r, 2000));
   await new Promise((resolve, reject) => {
@@ -73,7 +81,11 @@ function ensureStarted() {
   return startupPromise;
 }
 
-export async function convertToPdf(inputPath, outputPath) {
+export function convertToPdf(inputPath, outputPath) {
+  return loLimit(() => _convertToPdf(inputPath, outputPath));
+}
+
+async function _convertToPdf(inputPath, outputPath) {
   await ensureStarted();
 
   if (restartPromise) {
