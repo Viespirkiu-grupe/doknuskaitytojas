@@ -1,7 +1,7 @@
 services:
   viesdoknuskaitytojas:
-    build: .
-    image: viesdoknuskaitytojas
+    # build: .
+    image: ghcr.io/viespirkiu-grupe/doknuskaitytojas:latest
     container_name: viesdoknuskaitytojas
     restart: unless-stopped
     env_file:
